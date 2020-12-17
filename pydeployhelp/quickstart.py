@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+import argparse
 import os
-from typing import NamedTuple, Set
 from pathlib import Path
+from typing import NamedTuple, Set
 
 from ruamel.yaml import YAML
 
@@ -13,12 +14,12 @@ class QuickstartDefaults(NamedTuple):
 
 
 class Quickstart:
-    def __init__(self):
+    def __init__(self, silent: bool = False):
+        self.silent = silent
         self.defaults = QuickstartDefaults(
             deploy_dir='deploy',
             deploy_tasks={'build', 'up', 'down'},
-            dockerfile="""
-            # use some base image
+            dockerfile="""# use some base image
             FROM python:buster
 
             # run console commands inside image
@@ -33,9 +34,9 @@ class Quickstart:
             """
         )
 
-    @staticmethod
-    def _print_service_message(message: str, warning: bool = False, error: bool = False):
-        print(f'\x1b[1;3{1 if error else 3 if warning else 2};40m{message}\x1b[0m')
+    def _print_service_message(self, message: str, warning: bool = False, error: bool = False):
+        if not self.silent or error:
+            print(f'\x1b[1;3{1 if error else 3 if warning else 2};40m{message}\x1b[0m')
 
     def _add_permissions(self, path: Path):
         try:
@@ -62,19 +63,27 @@ class Quickstart:
     def enter_project_name(self) -> str:
         """ Receive project name from user input """
 
-        cur_dir = Path(os.getcwd()).name
-        project_name = input(f'Enter project name [{cur_dir}]: ').strip() or cur_dir
+        project_name = Path(os.getcwd()).name
+        if not self.silent:
+            project_name = input(f'Enter project name [{project_name}]: ').strip() or project_name
         return project_name
 
     def enter_deploy_dir(self) -> Path:
         """ Receive deploy directory path from user input """
 
-        deploy_dir = Path(input(
-            f'Enter directory path where deploy scripts should be generated [{self.defaults.deploy_dir}]: '
-        ).strip() or self.defaults.deploy_dir)
+        deploy_dir = self.defaults.deploy_dir
+        if not self.silent:
+            deploy_dir = input(
+                f'Enter directory path where deploy scripts should be created [{deploy_dir}]: '
+            ).strip() or deploy_dir
 
+        deploy_dir = Path(deploy_dir)
         if deploy_dir.exists() and not deploy_dir.is_dir():
             self._print_service_message(f'"{deploy_dir}"" is not a valid directory path, please try again', error=True)
+
+            if self.silent:
+                raise KeyboardInterrupt  # prevent from RecursionError
+
             return self.enter_deploy_dir()
 
         deploy_dir.mkdir(exist_ok=True, parents=True)
@@ -85,13 +94,15 @@ class Quickstart:
     def enter_deploy_tasks(self) -> Set[str]:
         """ Receive deploy tasks names from user input """
 
-        defaults = ','.join(self.defaults.deploy_tasks)
-        deploy_tasks = set(filter(
-            lambda x: x in self.defaults.deploy_tasks,
-            (task.strip().lower() for task in input(
-                f'Enter comma separated deploy tasks names from following: {defaults} [{defaults}]: '
-            ).strip().split(','))
-        )) or self.defaults.deploy_tasks
+        deploy_tasks = self.defaults.deploy_tasks
+        defaults = ','.join(deploy_tasks)
+        if not self.silent:
+            deploy_tasks = set(filter(
+                lambda x: x in self.defaults.deploy_tasks,
+                (task.strip().lower() for task in input(
+                    f'Enter comma separated deploy tasks names from following: {defaults} [{defaults}]: '
+                ).strip().split(','))
+            )) or deploy_tasks
         return deploy_tasks
 
     def create_config_file(self, deploy_dir: Path, deploy_tasks: Set[str]):
@@ -155,8 +166,19 @@ class Quickstart:
         self._print_service_message('\tdocker-compose\t\N{check mark}')
 
 
+def parse_args() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-s', '--silent',
+        action='store_true',
+        help='If specified, all communication with user will be ignored, default values will be used instead'
+    )
+    return parser.parse_args()
+
+
 def main():
-    quickstart = Quickstart()
+    args = parse_args()
+    quickstart = Quickstart(silent=args.silent)
     quickstart.start()
 
 

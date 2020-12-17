@@ -37,11 +37,14 @@ python setup.py install
 
 ### pydeployhelp-quickstart
 
-Open terminal and execute following:
+```text
+usage: pydeployhelp-quickstart [-h] [-s]
 
-```properties
-pydeployhelp-quickstart
+optional arguments:
+  -h, --help    show this help message and exit
+  -s, --silent  If specified, all communication with user will be ignored, default values will be used instead
 ```
 
-Then you will be asked to enter some info (*project name, deploy directory location, supported tasks*),
+Executing in ordinary way (without `--silent`) you will be asked to enter some info
+(*project name, deploy directory location, supported tasks*),
 soon after that you will see message about service files creation status.
