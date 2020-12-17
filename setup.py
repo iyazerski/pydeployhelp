@@ -26,6 +26,7 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
+            'pydeployhelp = pydeployhelp.deploy:main',
             'pydeployhelp-quickstart = pydeployhelp.quickstart:main'
         ]
     },

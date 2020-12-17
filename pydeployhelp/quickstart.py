@@ -2,20 +2,23 @@
 import argparse
 import os
 from pathlib import Path
-from typing import NamedTuple, Set
+from typing import Set
 
+from pydantic import BaseModel
 from ruamel.yaml import YAML
 
+from pydeployhelp.base import ABC, Configs
 
-class QuickstartDefaults(NamedTuple):
+
+class QuickstartDefaults(BaseModel):
     deploy_dir: str
     deploy_tasks: Set[str]
     dockerfile: str
 
 
-class Quickstart:
-    def __init__(self, silent: bool = False):
-        self.silent = silent
+class Quickstart(ABC):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.defaults = QuickstartDefaults(
             deploy_dir='deploy',
             deploy_tasks={'build', 'up', 'down'},
@@ -34,16 +37,6 @@ class Quickstart:
             """
         )
 
-    def _print_service_message(self, message: str, warning: bool = False, error: bool = False):
-        if not self.silent or error:
-            print(f'\x1b[1;3{1 if error else 3 if warning else 2};40m{message}\x1b[0m')
-
-    def _add_permissions(self, path: Path):
-        try:
-            path.chmod(0o777)  # TODO: use permissions from params
-        except PermissionError:
-            self._print_service_message(f'Unable to change permissions for "{path}"', warning=True)
-
     def start(self):
         """ Receive info from user input and create deploy directory scripts """
 
@@ -51,7 +44,7 @@ class Quickstart:
             project_name = self.enter_project_name()
             deploy_dir = self.enter_deploy_dir()
             deploy_tasks = self.enter_deploy_tasks()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, InterruptedError):
             self._print_service_message('Interrupted', error=True)
         else:
             self._print_service_message(f'Creating service files for project "{project_name}" at "{deploy_dir}":')
@@ -82,7 +75,7 @@ class Quickstart:
             self._print_service_message(f'"{deploy_dir}"" is not a valid directory path, please try again', error=True)
 
             if self.silent:
-                raise KeyboardInterrupt  # prevent from RecursionError
+                raise InterruptedError  # prevent from RecursionError
 
             return self.enter_deploy_dir()
 
@@ -100,33 +93,27 @@ class Quickstart:
             deploy_tasks = set(filter(
                 lambda x: x in self.defaults.deploy_tasks,
                 (task.strip().lower() for task in input(
-                    f'Enter comma separated deploy tasks names from following: {defaults} [{defaults}]: '
-                ).strip().split(','))
+                    f'Enter comma separated deploy tasks names from following: {self._format_defaults(defaults)} '
+                    f'[{defaults}]: ').strip().split(','))
             )) or deploy_tasks
         return deploy_tasks
 
     def create_config_file(self, deploy_dir: Path, deploy_tasks: Set[str]):
         """ Create file with deploy configs and tasks pipeline """
 
-        data = {
-            'context': {
-                'env_file': '.env'
-            },
-            'tasks': {
-                task: [
-                    {
-                        'title': f'{task} all',
-                        'pipeline': [f'docker-compose -f {deploy_dir}/docker-compose-{"{ENV}"}.yml {task}']
-                    }
-                ] for task in deploy_tasks
-            }
-        }
+        configs = Configs(
+            context=dict(env_file='.env', compose=f'{deploy_dir}/docker-compose.yml'),
+            tasks={task: [dict(
+                title=f'{task} all',
+                pipeline=[f'docker-compose -f {deploy_dir}/docker-compose-{"{ENV}"}.yml {task}']
+            )] for task in deploy_tasks}
+        )
 
         yaml = YAML()
         yaml.indent(mapping=2, sequence=4, offset=2)
         configs_path = Path(f'{deploy_dir}/config.yml')
         with configs_path.open('w', encoding='utf-8') as fp:
-            yaml.dump(data, fp)
+            yaml.dump(configs.dict(), fp)
 
         self._add_permissions(configs_path)
         self._print_service_message('\tconfigs\t\t\N{check mark}')
