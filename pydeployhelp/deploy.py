@@ -32,8 +32,9 @@ class Deploy(ABC):
         except (KeyboardInterrupt, InterruptedError):
             self._print_service_message('Interrupted', error=True)
         else:
-            self.save_environment_compose(compose, deploy_targets, environ['env'])
+            compose_path = self.save_environment_compose(compose, deploy_targets, environ['env'])
             self.execute_pipeline(configs, environ, deploy_tasks)
+            self._remove_file(compose_path)
             self._print_service_message(f'Finished deploy. Processing time: {time.perf_counter() - start_time:.1f}s')
 
     def load_configs(self, path: Union[str, Path]) -> Configs:
@@ -100,7 +101,7 @@ class Deploy(ABC):
         allowed_targets = list(compose['services'])
         return self.enter(allowed_items=allowed_targets, default='all', items_name='deploy targets')
 
-    def save_environment_compose(self, compose: Dict, deploy_targets: Set[str], env: str):
+    def save_environment_compose(self, compose: Dict, deploy_targets: Set[str], env: str) -> Path:
         """ Filter docker-compose services according to `deploy_targets`,
             rename main components according to `env` and save to new file
         """
@@ -129,6 +130,7 @@ class Deploy(ABC):
         with compose_path.open('w', encoding='utf-8') as fp:
             yaml.dump(compose, fp)
         self._add_permissions(compose_path)
+        return compose_path
 
     def execute_pipeline(self, configs: Configs, environ: Dict, deploy_tasks: List[str]):
         """ Execute commands from configs pipeline """

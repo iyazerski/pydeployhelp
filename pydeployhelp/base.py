@@ -41,6 +41,12 @@ class ABC(abc.ABC):
         except PermissionError:
             self._print_service_message(f'Unable to change permissions for "{path}"', warning=True)
 
+    def _remove_file(self, path: Path):
+        try:
+            path.unlink()
+        except PermissionError:
+            self._print_service_message(f'Unable to delete file "{path}"', warning=True)
+
     def ask_to_continue(self) -> bool:
         """ Receive agreement from user to continue """
 
