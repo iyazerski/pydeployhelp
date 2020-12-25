@@ -7,6 +7,7 @@ from typing import Set
 from pydantic import BaseModel
 from ruamel.yaml import YAML
 
+from pydeployhelp import __version__
 from pydeployhelp.base import ABC, Configs
 
 
@@ -44,6 +45,7 @@ class Quickstart(ABC):
             project_name = self.enter_project_name()
             deploy_dir = self.enter_deploy_dir()
             deploy_tasks = self.enter_deploy_tasks()
+            self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError):
             self._print_service_message('Interrupted', error=True)
         else:
@@ -87,16 +89,8 @@ class Quickstart(ABC):
     def enter_deploy_tasks(self) -> Set[str]:
         """ Receive deploy tasks names from user input """
 
-        deploy_tasks = self.defaults.deploy_tasks
-        defaults = ','.join(deploy_tasks)
-        if not self.silent:
-            deploy_tasks = set(filter(
-                lambda x: x in self.defaults.deploy_tasks,
-                (task.strip().lower() for task in input(
-                    f'Enter comma separated deploy tasks names from following: {self._format_defaults(defaults)} '
-                    f'[{defaults}]: ').strip().split(','))
-            )) or deploy_tasks
-        return deploy_tasks
+        allowed_tasks = list(self.defaults.deploy_tasks)
+        return self.enter(allowed_items=allowed_tasks, default='all', items_name='deploy tasks')
 
     def create_config_file(self, deploy_dir: Path, deploy_tasks: Set[str]):
         """ Create file with deploy configs and tasks pipeline """
@@ -160,13 +154,21 @@ def parse_args() -> argparse.ArgumentParser:
         action='store_true',
         help='If specified, all communication with user will be ignored, default values will be used instead'
     )
+    parser.add_argument(
+        '-v', '--version',
+        action='store_true',
+        help='Print version and exit'
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    quickstart = Quickstart(silent=args.silent)
-    quickstart.start()
+    if args.version:
+        print(f'pydeployhelp-quickstart version {__version__}')
+    else:
+        quickstart = Quickstart(silent=args.silent)
+        quickstart.start()
 
 
 if __name__ == "__main__":

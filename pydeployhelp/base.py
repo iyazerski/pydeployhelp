@@ -1,6 +1,6 @@
 import abc
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 from pydantic import BaseModel
 
@@ -8,22 +8,89 @@ from pydantic import BaseModel
 class ABC(abc.ABC):
     def __init__(self, silent: bool = False):
         self.silent = silent
+        self.colors = {
+            color: i
+            for i, color in enumerate(['black', 'red', 'green', 'orange', 'blue', 'purple', 'yellow', 'white'])
+        }
+        self.mark = self._colorize_string('\N{check mark}', color='green')
 
-    @staticmethod
-    def _format_defaults(text: str) -> str:
-        return f'\x1b[1;34;40m{text}\x1b[0m'
+    def _colorize_string(self, text: str, color: str = 'white') -> str:
+        """ Colorize `text`
+
+        Parameters
+        ----------
+
+        text : str
+            Text to be colorized
+        color : str, default=white
+            Text color. Choices: black, red, green, orange, blue, purple, yellow, white
+        """
+
+        color_code = self.colors.get(color, 7)
+        return f'\x1b[1;3{color_code};40m{text}\x1b[0m'
 
     def _print_service_message(self, message: str, warning: bool = False, error: bool = False):
         """ Print colorized messages """
 
         if not self.silent or error:
-            print(f'\x1b[1;3{1 if error else 3 if warning else 2};40m{message}\x1b[0m')
+            print(self._colorize_string(message, color='red' if error else 'orange' if warning else 'green'))
 
     def _add_permissions(self, path: Path):
         try:
             path.chmod(0o777)  # TODO: use permissions from params
         except PermissionError:
             self._print_service_message(f'Unable to change permissions for "{path}"', warning=True)
+
+    def ask_to_continue(self) -> bool:
+        """ Receive agreement from user to continue """
+
+        agreement = input('Do you agree to start processing (yes or no)? [yes]: ').strip().lower() or 'yes'
+        if agreement == 'yes':
+            agree = True
+        elif agreement == 'no':
+            agree = False
+        else:
+            agree = self.ask_to_continue()
+        if not agree:
+            raise InterruptedError
+
+    def enter(self, allowed_items: List[str], default: str, items_name: str) -> List[str]:
+        if self.silent:
+            if default == 'all':
+                items = allowed_items
+            else:
+                items = [default]
+        else:
+            choices = []
+
+            if default == 'all':
+                choices.append(self._colorize_string('all', color='green'))
+                choices.append('|')
+                choices.append(self._colorize_string(' '.join(allowed_items), color='blue'))
+            else:
+                choices.append(self._colorize_string('all', color='blue'))
+                choices.append('|')
+                choices.append(self._colorize_string(default, color='green'))
+                if len(allowed_items) != 1:
+                    choices.append(self._colorize_string(' '.join(allowed_items[1:]), color='blue'))
+
+            choices = ' '.join(choices)
+            items = list(filter(
+                lambda x: x in allowed_items or x == 'all',
+                [
+                    item.strip().lower() for item in
+                    input(f'Enter {items_name} from following: {choices}: ').replace(',', ' ').strip().split()
+                ]
+            )) or [default]
+
+            if 'all' in items:
+                items = allowed_items
+
+            print(
+                f'\t{self.mark} processing {items_name}: {self._colorize_string(" ".join(items), color="green")}'
+            )
+
+        return items
 
     @abc.abstractmethod
     def start(self):

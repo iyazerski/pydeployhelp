@@ -8,6 +8,7 @@ from typing import List, Set, Dict, Union
 from pydantic import BaseModel
 from ruamel.yaml import YAML
 
+from pydeployhelp import __version__
 from pydeployhelp.base import ABC, Configs
 from pydeployhelp.utils import read_env_file
 
@@ -27,6 +28,7 @@ class Deploy(ABC):
             compose = self.load_compose(configs.context.get('compose', f'{self.deploydir}/docker-compose.yml'))
             deploy_tasks = self.enter_deploy_tasks(configs)
             deploy_targets = self.enter_deploy_targets(compose)
+            self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError):
             self._print_service_message('Interrupted', error=True)
         else:
@@ -89,30 +91,14 @@ class Deploy(ABC):
     def enter_deploy_tasks(self, configs: Configs) -> List[str]:
         """ Receive deploy tasks names from user input """
 
-        deploy_tasks = list(configs.tasks)
-        defaults = ','.join(deploy_tasks)
-        if not self.silent:
-            deploy_tasks = list(filter(
-                lambda x: x in deploy_tasks,
-                [task.strip().lower() for task in input(
-                    f'Enter comma separated deploy tasks names from following: {self._format_defaults(defaults)} '
-                    f'[{deploy_tasks[0]}]: ').strip().split(',')]
-            )) or [deploy_tasks[0]]
-        return deploy_tasks
+        allowed_tasks = list(configs.tasks)
+        return self.enter(allowed_items=allowed_tasks, default=allowed_tasks[0], items_name='deploy tasks')
 
     def enter_deploy_targets(self, compose: Dict) -> Set[str]:
         """ Receive deploy targets names from user input """
 
-        deploy_targets = list(compose['services'])
-        defaults = ','.join(deploy_targets)
-        if not self.silent:
-            deploy_targets = set(filter(
-                lambda x: x in deploy_targets,
-                (task.strip().lower() for task in input(
-                    f'Enter comma separated deploy targets names from following: {self._format_defaults(defaults)} '
-                    f'[{defaults}]: ').strip().split(','))
-            )) or deploy_targets
-        return deploy_targets
+        allowed_targets = list(compose['services'])
+        return self.enter(allowed_items=allowed_targets, default='all', items_name='deploy targets')
 
     def save_environment_compose(self, compose: Dict, deploy_targets: Set[str], env: str):
         """ Filter docker-compose services according to `deploy_targets`,
@@ -176,13 +162,21 @@ def parse_args() -> argparse.ArgumentParser:
         action='store_true',
         help='If specified, all communication with user will be ignored, default values will be used instead'
     )
+    parser.add_argument(
+        '-v', '--version',
+        action='store_true',
+        help='Print version and exit'
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    deploy = Deploy(deploydir=args.deploydir, silent=args.silent)
-    deploy.start()
+    if args.version:
+        print(f'pydeployhelp version {__version__}')
+    else:
+        deploy = Deploy(deploydir=args.deploydir, silent=args.silent)
+        deploy.start()
 
 
 if __name__ == "__main__":
