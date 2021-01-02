@@ -81,13 +81,14 @@ class ABC(abc.ABC):
                     choices.append(self._colorize_string(' '.join(allowed_items[1:]), color='blue'))
 
             choices = ' '.join(choices)
+            user_input = input(f'Enter {items_name} from following: {choices}: ').replace(',', ' ').strip() or default
             items = list(filter(
                 lambda x: x in allowed_items or x == 'all',
-                [
-                    item.strip().lower() for item in
-                    input(f'Enter {items_name} from following: {choices}: ').replace(',', ' ').strip().split()
-                ]
-            )) or [default]
+                [item.strip().lower() for item in user_input.split()]
+            ))
+
+            if not items:
+                return self.enter(allowed_items, default, items_name)
 
             if 'all' in items:
                 items = allowed_items

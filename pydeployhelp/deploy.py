@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import argparse
 import os
+import shutil
 import time
 from pathlib import Path
 from typing import List, Set, Dict, Union
@@ -18,16 +19,25 @@ class Deploy(ABC):
         super().__init__(*args, **kwargs)
         self.deploydir = Path(deploydir)
 
+    def validate_docker_binaries(self):
+        for binary in ['docker', 'docker-compose']:
+            return_code = os.system(f'{binary} -v')
+            if return_code != 0:
+                raise InterruptedError
+
     def start(self):
         start_time = time.perf_counter()
         self._print_service_message('Started deploy')
 
         try:
+            self.validate_docker_binaries()
+
             configs = self.load_configs(f'{self.deploydir}/config.yml')
             environ = self.load_environ(configs.context.get('env_file', '.env'))
             compose = self.load_compose(configs.context.get('compose', f'{self.deploydir}/docker-compose.yml'))
             deploy_tasks = self.enter_deploy_tasks(configs)
             deploy_targets = self.enter_deploy_targets(compose)
+
             self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError):
             self._print_service_message('Interrupted', error=True)
