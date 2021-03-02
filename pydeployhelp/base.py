@@ -1,8 +1,7 @@
 import abc
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List
-
-from pydantic import BaseModel
 
 
 class ABC(abc.ABC):
@@ -104,6 +103,7 @@ class ABC(abc.ABC):
         ...
 
 
-class Configs(BaseModel):
-    context: Dict = {}
-    tasks: Dict = {}
+@dataclass
+class Configs:
+    context: Dict = field(default_factory=dict)
+    tasks: Dict = field(default_factory=dict)

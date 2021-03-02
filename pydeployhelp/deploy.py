@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import argparse
 import os
-import shutil
+import io
 import time
 from pathlib import Path
 from typing import List, Set, Dict, Union
 
-from pydantic import BaseModel
+from jinja2 import Template
 from ruamel.yaml import YAML
 
 from pydeployhelp import __version__
@@ -34,7 +34,9 @@ class Deploy(ABC):
 
             configs = self.load_configs(f'{self.deploydir}/config.yml')
             environ = self.load_environ(configs.context.get('env_file', '.env'))
-            compose = self.load_compose(configs.context.get('compose', f'{self.deploydir}/docker-compose.yml'))
+            compose = self.load_compose(
+                configs.context.get('compose', f'{self.deploydir}/docker-compose-template.j2'), environ=environ
+            )
             deploy_tasks = self.enter_deploy_tasks(configs)
             deploy_targets = self.enter_deploy_targets(compose)
 
@@ -81,7 +83,7 @@ class Deploy(ABC):
         environ['env'] = environ.get('ENV', 'latest')
         return environ
 
-    def load_compose(self, path: Union[str, Path]) -> Dict:
+    def load_compose(self, path: Union[str, Path], environ: Dict) -> Dict:
         """ Load docker-compose data """
 
         compose = {}
@@ -91,7 +93,7 @@ class Deploy(ABC):
             self._print_service_message('compose file was not found, skipping', warning=True)
         else:
             with path.open('r', encoding='utf-8') as fp:
-                compose = YAML().load(fp)
+                compose = YAML().load(io.StringIO(Template(fp.read()).render(**environ)))
 
         if not compose.get('services'):
             self._print_service_message('No services were found in docker-compose', error=True)
@@ -117,22 +119,7 @@ class Deploy(ABC):
         """
 
         # remove ignored services, format names and links
-        services = {}
-        for service_name, service_data in compose['services'].items():
-            if service_name not in deploy_targets:
-                continue
-            for special_field in ['depends_on', 'links']:
-                if special_field not in service_data:
-                    continue
-                service_data[special_field] = [
-                    f'{service}-{env}' for service in service_data[special_field] if service in deploy_targets
-                ]
-            services[f'{service_name}-{env}'] = service_data
-        compose['services'] = services
-
-        for compose_field in ['networks', 'volumes']:
-            if compose_field in compose:
-                compose[compose_field] = {f'{k}-{env}': v for k, v in compose[compose_field].items()}
+        compose['services'] = {name: data for name, data in compose['services'].items() if name in deploy_targets}
 
         yaml = YAML()
         yaml.indent(mapping=2, sequence=4, offset=2)

@@ -1,2 +1,2 @@
 ruamel.yaml
-pydantic
+jinja2

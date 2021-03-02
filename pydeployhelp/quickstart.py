@@ -1,17 +1,18 @@
 #!/usr/bin/env python
 import argparse
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Set
 
-from pydantic import BaseModel
 from ruamel.yaml import YAML
 
 from pydeployhelp import __version__
 from pydeployhelp.base import ABC, Configs
 
 
-class QuickstartDefaults(BaseModel):
+@dataclass
+class QuickstartDefaults:
     deploy_dir: str
     deploy_tasks: Set[str]
     dockerfile: str
@@ -96,7 +97,7 @@ class Quickstart(ABC):
         """ Create file with deploy configs and tasks pipeline """
 
         configs = Configs(
-            context=dict(env_file='.env', compose=f'{deploy_dir}/docker-compose.yml'),
+            context=dict(env_file='.env', compose=f'{deploy_dir}/docker-compose-template.j2'),
             tasks={task: [dict(
                 title=f'{task} all',
                 pipeline=[f'docker-compose -f {deploy_dir}/docker-compose-{"{ENV}"}.yml {task}']
@@ -127,19 +128,19 @@ class Quickstart(ABC):
         data = {
             'version': '3',
             'services': {
-                project_name: {
+                project_name + '-{{ ENV }}': {
                     'build': {
                         'context': '..',
                         'dockerfile': f'{deploy_dir}/Dockerfile'
                     },
-                    'image': project_name,
-                    'container_name': project_name
+                    'image': project_name + ':{{ ENV }}',
+                    'container_name': project_name + '-{{ ENV }}'
                 }
             }
         }
         yaml = YAML()
         yaml.indent(mapping=2, sequence=4, offset=2)
-        compose_path = Path(f'{deploy_dir}/docker-compose.yml')
+        compose_path = Path(f'{deploy_dir}/docker-compose-template.j2')
         with compose_path.open('w', encoding='utf-8') as fp:
             yaml.dump(data, fp)
 
