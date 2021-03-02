@@ -38,11 +38,12 @@ python setup.py install
 ### pydeployhelp-quickstart
 
 ```text
-usage: pydeployhelp-quickstart [-h] [-s]
+usage: pydeployhelp-quickstart [-h] [-s] [-v]
 
 optional arguments:
   -h, --help    show this help message and exit
   -s, --silent  If specified, all communication with user will be ignored, default values will be used instead
+  -v, --version         Print version and exit
 ```
 
 Executing in ordinary way (without `--silent`) you will be asked to enter some info
@@ -52,13 +53,14 @@ soon after that you will see message about service files creation status.
 ### pydeployhelp
 
 ```text
-usage: pydeployhelp [-h] [-d DEPLOYDIR] [-s]
+usage: pydeployhelp [-h] [-d DEPLOYDIR] [-s] [-v]
 
 optional arguments:
   -h, --help            show this help message and exit
   -d DEPLOYDIR, --deploydir DEPLOYDIR
                         Path to directory with deploy scripts (normally generated via `pydeployhelp-quickstart`)
   -s, --silent          If specified, all communication with user will be ignored, default values will be used instead
+  -v, --version         Print version and exit
 ```
 
 Executing in ordinary way (without `--silent`) you will be asked to enter some info

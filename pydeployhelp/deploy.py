@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 import argparse
 import os
+import io
 import time
 from pathlib import Path
 from typing import List, Set, Dict, Union
 
-from pydantic import BaseModel
+from jinja2 import Template
 from ruamel.yaml import YAML
 
+from pydeployhelp import __version__
 from pydeployhelp.base import ABC, Configs
 from pydeployhelp.utils import read_env_file
 
@@ -17,21 +19,34 @@ class Deploy(ABC):
         super().__init__(*args, **kwargs)
         self.deploydir = Path(deploydir)
 
+    def validate_docker_binaries(self):
+        for binary in ['docker', 'docker-compose']:
+            return_code = os.system(f'{binary} -v')
+            if return_code != 0:
+                raise InterruptedError
+
     def start(self):
         start_time = time.perf_counter()
         self._print_service_message('Started deploy')
 
         try:
+            self.validate_docker_binaries()
+
             configs = self.load_configs(f'{self.deploydir}/config.yml')
             environ = self.load_environ(configs.context.get('env_file', '.env'))
-            compose = self.load_compose(configs.context.get('compose', f'{self.deploydir}/docker-compose.yml'))
+            compose = self.load_compose(
+                configs.context.get('compose', f'{self.deploydir}/docker-compose-template.j2'), environ=environ
+            )
             deploy_tasks = self.enter_deploy_tasks(configs)
             deploy_targets = self.enter_deploy_targets(compose)
+
+            self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError):
             self._print_service_message('Interrupted', error=True)
         else:
-            self.save_environment_compose(compose, deploy_targets, environ['env'])
+            compose_path = self.save_environment_compose(compose, deploy_targets, environ['env'])
             self.execute_pipeline(configs, environ, deploy_tasks)
+            self._remove_file(compose_path)
             self._print_service_message(f'Finished deploy. Processing time: {time.perf_counter() - start_time:.1f}s')
 
     def load_configs(self, path: Union[str, Path]) -> Configs:
@@ -68,7 +83,7 @@ class Deploy(ABC):
         environ['env'] = environ.get('ENV', 'latest')
         return environ
 
-    def load_compose(self, path: Union[str, Path]) -> Dict:
+    def load_compose(self, path: Union[str, Path], environ: Dict) -> Dict:
         """ Load docker-compose data """
 
         compose = {}
@@ -78,7 +93,7 @@ class Deploy(ABC):
             self._print_service_message('compose file was not found, skipping', warning=True)
         else:
             with path.open('r', encoding='utf-8') as fp:
-                compose = YAML().load(fp)
+                compose = YAML().load(io.StringIO(Template(fp.read()).render(**environ)))
 
         if not compose.get('services'):
             self._print_service_message('No services were found in docker-compose', error=True)
@@ -89,53 +104,22 @@ class Deploy(ABC):
     def enter_deploy_tasks(self, configs: Configs) -> List[str]:
         """ Receive deploy tasks names from user input """
 
-        deploy_tasks = list(configs.tasks)
-        defaults = ','.join(deploy_tasks)
-        if not self.silent:
-            deploy_tasks = list(filter(
-                lambda x: x in deploy_tasks,
-                [task.strip().lower() for task in input(
-                    f'Enter comma separated deploy tasks names from following: {self._format_defaults(defaults)} '
-                    f'[{deploy_tasks[0]}]: ').strip().split(',')]
-            )) or [deploy_tasks[0]]
-        return deploy_tasks
+        allowed_tasks = list(configs.tasks)
+        return self.enter(allowed_items=allowed_tasks, default=allowed_tasks[0], items_name='deploy tasks')
 
     def enter_deploy_targets(self, compose: Dict) -> Set[str]:
         """ Receive deploy targets names from user input """
 
-        deploy_targets = list(compose['services'])
-        defaults = ','.join(deploy_targets)
-        if not self.silent:
-            deploy_targets = set(filter(
-                lambda x: x in deploy_targets,
-                (task.strip().lower() for task in input(
-                    f'Enter comma separated deploy targets names from following: {self._format_defaults(defaults)} '
-                    f'[{defaults}]: ').strip().split(','))
-            )) or deploy_targets
-        return deploy_targets
+        allowed_targets = list(compose['services'])
+        return self.enter(allowed_items=allowed_targets, default='all', items_name='deploy targets')
 
-    def save_environment_compose(self, compose: Dict, deploy_targets: Set[str], env: str):
+    def save_environment_compose(self, compose: Dict, deploy_targets: Set[str], env: str) -> Path:
         """ Filter docker-compose services according to `deploy_targets`,
             rename main components according to `env` and save to new file
         """
 
         # remove ignored services, format names and links
-        services = {}
-        for service_name, service_data in compose['services'].items():
-            if service_name not in deploy_targets:
-                continue
-            for special_field in ['depends_on', 'links']:
-                if special_field not in service_data:
-                    continue
-                service_data[special_field] = [
-                    f'{service}-{env}' for service in service_data[special_field] if service in deploy_targets
-                ]
-            services[f'{service_name}-{env}'] = service_data
-        compose['services'] = services
-
-        for compose_field in ['networks', 'volumes']:
-            if compose_field in compose:
-                compose[compose_field] = {f'{k}-{env}': v for k, v in compose[compose_field].items()}
+        compose['services'] = {name: data for name, data in compose['services'].items() if name in deploy_targets}
 
         yaml = YAML()
         yaml.indent(mapping=2, sequence=4, offset=2)
@@ -143,6 +127,7 @@ class Deploy(ABC):
         with compose_path.open('w', encoding='utf-8') as fp:
             yaml.dump(compose, fp)
         self._add_permissions(compose_path)
+        return compose_path
 
     def execute_pipeline(self, configs: Configs, environ: Dict, deploy_tasks: List[str]):
         """ Execute commands from configs pipeline """
@@ -176,13 +161,21 @@ def parse_args() -> argparse.ArgumentParser:
         action='store_true',
         help='If specified, all communication with user will be ignored, default values will be used instead'
     )
+    parser.add_argument(
+        '-v', '--version',
+        action='store_true',
+        help='Print version and exit'
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    deploy = Deploy(deploydir=args.deploydir, silent=args.silent)
-    deploy.start()
+    if args.version:
+        print(f'pydeployhelp version {__version__}')
+    else:
+        deploy = Deploy(deploydir=args.deploydir, silent=args.silent)
+        deploy.start()
 
 
 if __name__ == "__main__":
