@@ -118,8 +118,18 @@ class Deploy(ABC):
             rename main components according to `env` and save to new file
         """
 
-        # remove ignored services, format names and links
-        compose['services'] = {name: data for name, data in compose['services'].items() if name in deploy_targets}
+        # remove ignored services
+        services = {}
+        for service_name, service_data in compose['services'].items():
+            if service_name not in deploy_targets:
+                continue
+            for ref_name in ['depends_on', 'links']:
+                ref_data = service_data.get(ref_name)
+                if not ref_data:
+                    continue
+                service_data[ref_name] = [ref for ref in ref_data if ref in deploy_targets]
+            services[service_name] = service_data
+        compose['services'] = services
 
         yaml = YAML()
         yaml.indent(mapping=2, sequence=4, offset=2)
