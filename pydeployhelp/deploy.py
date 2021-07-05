@@ -18,13 +18,19 @@ class Deploy(ABC):
     def __init__(self, deploydir: str = 'deploy', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.deploydir = Path(deploydir)
+        self.docker_compose_v2_exit_code = 4096
 
-    @staticmethod
-    def validate_docker_binaries():
+    def validate_docker_binaries(self):
         """ Check that all required binaries exist and are accessible by current user """
 
         for binary in ['docker', 'docker-compose']:
             return_code = os.system(f'{binary} -v')
+            if return_code == self.docker_compose_v2_exit_code:
+                self._print_service_message(
+                    'Seems that Docker Compose v2 is enabled. Please disable it '
+                    'via `docker-compose disable-v2` and try again',
+                    error=True
+                )
             if return_code != 0:
                 raise InterruptedError
 
@@ -47,7 +53,7 @@ class Deploy(ABC):
 
             self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError):
-            self._print_service_message('Interrupted', error=True)
+            self._print_service_message('Finished deploy with errors', error=True)
         else:
             compose_path = self.save_environment_compose(compose, deploy_targets, environ['env'])
             self.execute_pipeline(configs, environ, deploy_tasks)
