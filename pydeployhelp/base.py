@@ -3,14 +3,22 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List
 
+from sty import fg
+
 
 class ABC(abc.ABC):
     def __init__(self, silent: bool = False):
         self.silent = silent
-        self.colors = {
-            color: i
-            for i, color in enumerate(['black', 'red', 'green', 'orange', 'blue', 'purple', 'yellow', 'white'])
-        }
+        self.colors = dict(
+            black=fg.black,
+            red=fg.red,
+            green=fg.green,
+            yellow=fg.yellow,
+            blue=fg.blue,
+            magenta=fg.magenta,
+            cyan=fg.cyan,
+            white=fg.white
+        )
         self.mark = self._colorize_string('\N{check mark}', color='green')
 
     def _colorize_string(self, text: str, color: str = 'white') -> str:
@@ -22,17 +30,17 @@ class ABC(abc.ABC):
         text : str
             Text to be colorized
         color : str, default=white
-            Text color. Choices: black, red, green, orange, blue, purple, yellow, white
+            Text color. Choices: black, red, green, yellow, blue, magenta, cyan, white
         """
 
-        color_code = self.colors.get(color, 7)
-        return f'\x1b[1;3{color_code};40m{text}\x1b[0m'
+        fg_color = self.colors.get(color, fg.white)
+        return fg_color + text + fg.rs
 
     def _print_service_message(self, message: str, warning: bool = False, error: bool = False):
         """ Print colorized messages """
 
         if not self.silent or error:
-            print(self._colorize_string(message, color='red' if error else 'orange' if warning else 'green'))
+            print(self._colorize_string(message, color='red' if error else 'yellow' if warning else 'green'))
 
     def _add_permissions(self, path: Path):
         try:
@@ -46,16 +54,17 @@ class ABC(abc.ABC):
         except PermissionError:
             self._print_service_message(f'Unable to delete file "{path}"', warning=True)
 
-    def ask_to_continue(self) -> bool:
+    def ask_to_continue(self) -> None:
         """ Receive agreement from user to continue """
 
         agreement = input('Do you agree to start processing (yes or no)? [yes]: ').strip().lower() or 'yes'
+        agree = None
         if agreement == 'yes':
             agree = True
         elif agreement == 'no':
             agree = False
         else:
-            agree = self.ask_to_continue()
+            self.ask_to_continue()
         if not agree:
             raise InterruptedError
 

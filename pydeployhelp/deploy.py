@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 import argparse
-import os
 import io
+import os
 import time
 from pathlib import Path
-from typing import List, Set, Dict, Union
+from typing import List, Dict, Union
 
 from jinja2 import Template
 from ruamel.yaml import YAML
@@ -19,13 +19,18 @@ class Deploy(ABC):
         super().__init__(*args, **kwargs)
         self.deploydir = Path(deploydir)
 
-    def validate_docker_binaries(self):
+    @staticmethod
+    def validate_docker_binaries():
+        """ Check that all required binaries exist and are accessible by current user """
+
         for binary in ['docker', 'docker-compose']:
             return_code = os.system(f'{binary} -v')
             if return_code != 0:
                 raise InterruptedError
 
     def start(self):
+        """ Controller for all operations performed by `pydeployhelp` """
+
         start_time = time.perf_counter()
         self._print_service_message('Started deploy')
 
@@ -107,16 +112,15 @@ class Deploy(ABC):
         allowed_tasks = list(configs.tasks)
         return self.enter(allowed_items=allowed_tasks, default=allowed_tasks[0], items_name='deploy tasks')
 
-    def enter_deploy_targets(self, compose: Dict) -> Set[str]:
+    def enter_deploy_targets(self, compose: Dict) -> List[str]:
         """ Receive deploy targets names from user input """
 
         allowed_targets = list(compose['services'])
         return self.enter(allowed_items=allowed_targets, default='all', items_name='deploy targets')
 
-    def save_environment_compose(self, compose: Dict, deploy_targets: Set[str], env: str) -> Path:
+    def save_environment_compose(self, compose: Dict, deploy_targets: List[str], env: str) -> Path:
         """ Filter docker-compose services according to `deploy_targets`,
-            rename main components according to `env` and save to new file
-        """
+        rename main components according to `env` and save to new file """
 
         # remove ignored services
         services = {}
@@ -139,7 +143,7 @@ class Deploy(ABC):
         self._add_permissions(compose_path)
         return compose_path
 
-    def execute_pipeline(self, configs: Configs, environ: Dict, deploy_tasks: List[str]):
+    def execute_pipeline(self, configs: Configs, environ: Dict, deploy_tasks: List[str]) -> None:
         """ Execute commands from configs pipeline """
 
         for task in deploy_tasks:
@@ -159,7 +163,9 @@ class Deploy(ABC):
             self._print_service_message(f'Task "{task}": Finished')
 
 
-def parse_args() -> argparse.ArgumentParser:
+def parse_args() -> argparse.Namespace:
+    """ Create stdin arguments parser and parse args from user input """
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-d', '--deploydir',
@@ -180,13 +186,15 @@ def parse_args() -> argparse.ArgumentParser:
 
 
 def main():
+    """ Main entrypoint, which will be called when executing `pydeployhelp` in console """
+
     args = parse_args()
-    if args.version:
+    if args.version:  # noqa
         print(f'pydeployhelp version {__version__}')
     else:
-        deploy = Deploy(deploydir=args.deploydir, silent=args.silent)
+        deploy = Deploy(deploydir=args.deploydir, silent=args.silent)  # noqa
         deploy.start()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
