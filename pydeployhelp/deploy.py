@@ -29,7 +29,7 @@ class Deploy(ABC):
                 self._print_service_message(
                     'Seems that Docker Compose v2 is enabled. Please disable it '
                     'via `docker-compose disable-v2` and try again',
-                    error=True
+                    warning=True
                 )
             if return_code != 0:
                 raise InterruptedError
@@ -38,7 +38,7 @@ class Deploy(ABC):
         """ Controller for all operations performed by `pydeployhelp` """
 
         start_time = time.perf_counter()
-        self._print_service_message('Started deploy')
+        self._print_service_message('Started deploy\n')
 
         try:
             self.validate_docker_binaries()
