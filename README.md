@@ -33,6 +33,12 @@ python setup.py install
 
 - [docker-compose](https://docs.docker.com/compose/)
 
+### Updating to newer versions
+
+```properties
+python -m pip install --upgrade --no-cache-dir pydeployhelp
+```
+
 ## Usage
 
 ### pydeployhelp-quickstart
