@@ -53,7 +53,7 @@ class Deploy(ABC):
 
             self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError):
-            self._print_service_message('Finished deploy with errors', error=True)
+            self._print_service_message('\nFinished deploy', error=True)
         else:
             compose_path = self.save_environment_compose(compose, deploy_targets, environ['env'])
             self.execute_pipeline(configs, environ, deploy_tasks)
