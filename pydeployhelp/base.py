@@ -7,6 +7,8 @@ from sty import fg
 
 
 class ABC(abc.ABC):
+    """ Parent class for all CLI tools, contains common methods related to user i/o """
+
     def __init__(self, silent: bool = False):
         self.silent = silent
         self.colors = dict(
@@ -43,19 +45,24 @@ class ABC(abc.ABC):
             print(self._colorize_string(message, color='red' if error else 'yellow' if warning else 'green'))
 
     def _add_permissions(self, path: Path):
+        """ Add full permissions (rwx) for all users (ugo) to specified file.
+        This can be necessary for correct file deletion """
+
         try:
             path.chmod(0o777)  # TODO: use permissions from params
         except PermissionError:
             self._print_service_message(f'Unable to change permissions for "{path}"', warning=True)
 
     def _remove_file(self, path: Path):
+        """ Remove specified file from filesystem """
+
         try:
             path.unlink()
         except PermissionError:
             self._print_service_message(f'Unable to delete file "{path}"', warning=True)
 
     def ask_to_continue(self) -> None:
-        """ Receive agreement from user to continue """
+        """ Receive agreement from user input to continue """
 
         agreement = input('Do you agree to start processing (yes or no)? [yes]: ').strip().lower() or 'yes'
         agree = None
@@ -69,6 +76,8 @@ class ABC(abc.ABC):
             raise InterruptedError
 
     def enter(self, allowed_items: List[str], default: str, items_name: str) -> List[str]:
+        """ Receive answer from user input for provided list of available choices """
+
         if self.silent:
             if default == 'all':
                 items = allowed_items
