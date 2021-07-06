@@ -3,7 +3,7 @@ import argparse
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Set
+from typing import Set, List
 
 from ruamel.yaml import YAML
 
@@ -48,13 +48,16 @@ class Quickstart(ABC):
             deploy_tasks = self.enter_deploy_tasks()
             self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError):
-            self._print_service_message('Interrupted', error=True)
+            self._print_service_message('Interrupted', color=self.colors.red)
         else:
-            self._print_service_message(f'Creating service files for project "{project_name}" at "{deploy_dir}":')
+            self._print_service_message(
+                f'Creating service files for project "{project_name}" at "{deploy_dir}":',
+                color=self.colors.green
+            )
             self.create_config_file(deploy_dir, deploy_tasks)
             self.create_dockerfile(deploy_dir, project_name)
             self.create_compose(deploy_dir, project_name)
-            self._print_service_message('Done!')
+            self._print_service_message('Done!', color=self.colors.green)
 
     def enter_project_name(self) -> str:
         """ Receive project name from user input """
@@ -75,7 +78,10 @@ class Quickstart(ABC):
 
         deploy_dir = Path(deploy_dir)
         if deploy_dir.exists() and not deploy_dir.is_dir():
-            self._print_service_message(f'"{deploy_dir}"" is not a valid directory path, please try again', error=True)
+            self._print_service_message(
+                f'"{deploy_dir}"" is not a valid directory path, please try again',
+                color=self.colors.red
+            )
 
             if self.silent:
                 raise InterruptedError  # prevent from RecursionError
@@ -87,13 +93,13 @@ class Quickstart(ABC):
 
         return deploy_dir
 
-    def enter_deploy_tasks(self) -> Set[str]:
+    def enter_deploy_tasks(self) -> List[str]:
         """ Receive deploy tasks names from user input """
 
         allowed_tasks = list(self.defaults.deploy_tasks)
         return self.enter(allowed_items=allowed_tasks, default='all', items_name='deploy tasks')
 
-    def create_config_file(self, deploy_dir: Path, deploy_tasks: Set[str]):
+    def create_config_file(self, deploy_dir: Path, deploy_tasks: List[str]):
         """ Create file with deploy configs and tasks pipeline """
 
         configs = Configs(
@@ -111,7 +117,7 @@ class Quickstart(ABC):
             yaml.dump(configs.dict(), fp)
 
         self._add_permissions(configs_path)
-        self._print_service_message('\tconfigs\t\t\N{check mark}')
+        self._print_service_message('\tconfigs\t\t\N{check mark}', color=self.colors.green)
 
     def create_dockerfile(self, deploy_dir: Path, project_name: str):
         """ Create file with instructions for Docker daemon to build an image """
@@ -122,7 +128,7 @@ class Quickstart(ABC):
                 fp.write(f'{line.strip()}\n')
 
         self._add_permissions(dockerfile_path)
-        self._print_service_message('\tdockerfile\t\N{check mark}')
+        self._print_service_message('\tdockerfile\t\N{check mark}', color=self.colors.green)
 
     def create_compose(self, deploy_dir: Path, project_name: str):
         data = {
@@ -145,10 +151,10 @@ class Quickstart(ABC):
             yaml.dump(data, fp)
 
         self._add_permissions(compose_path)
-        self._print_service_message('\tdocker-compose\t\N{check mark}')
+        self._print_service_message('\tdocker-compose\t\N{check mark}', color=self.colors.green)
 
 
-def parse_args() -> argparse.ArgumentParser:
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-s', '--silent',

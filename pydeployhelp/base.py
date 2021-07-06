@@ -1,9 +1,21 @@
 import abc
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Dict, List
 
-from sty import fg
+from sty import fg, Style
+
+
+@dataclass
+class Colors:
+    black: Style = field(default=fg.black)
+    red: Style = field(default=fg.red)
+    green: Style = field(default=fg.green)
+    yellow: Style = field(default=fg.yellow)
+    blue: Style = field(default=fg.blue)
+    magenta: Style = field(default=fg.magenta)
+    cyan: Style = field(default=fg.cyan)
+    white: Style = field(default=fg.white)
 
 
 class ABC(abc.ABC):
@@ -11,19 +23,10 @@ class ABC(abc.ABC):
 
     def __init__(self, silent: bool = False):
         self.silent = silent
-        self.colors = dict(
-            black=fg.black,
-            red=fg.red,
-            green=fg.green,
-            yellow=fg.yellow,
-            blue=fg.blue,
-            magenta=fg.magenta,
-            cyan=fg.cyan,
-            white=fg.white
-        )
-        self.mark = self._colorize_string('\N{check mark}', color='green')
+        self.colors = Colors()
+        self.mark = self._colorize_string('\N{check mark}', color=self.colors.green)
 
-    def _colorize_string(self, text: str, color: str = 'white') -> str:
+    def _colorize_string(self, text: str, color: Style = None) -> str:
         """ Colorize `text`
 
         Parameters
@@ -35,14 +38,13 @@ class ABC(abc.ABC):
             Text color. Choices: black, red, green, yellow, blue, magenta, cyan, white
         """
 
-        fg_color = self.colors.get(color, fg.white)
-        return fg_color + text + fg.rs
+        return (color or self.colors.white) + text + fg.rs
 
-    def _print_service_message(self, message: str, warning: bool = False, error: bool = False):
+    def _print_service_message(self, message: str, force: bool = False, **kwargs):
         """ Print colorized messages """
 
-        if not self.silent or error:
-            print(self._colorize_string(message, color='red' if error else 'yellow' if warning else 'green'))
+        if not self.silent or force:
+            print(self._colorize_string(message, **kwargs))
 
     def _add_permissions(self, path: Path):
         """ Add full permissions (rwx) for all users (ugo) to specified file.
@@ -51,7 +53,7 @@ class ABC(abc.ABC):
         try:
             path.chmod(0o777)  # TODO: use permissions from params
         except PermissionError:
-            self._print_service_message(f'Unable to change permissions for "{path}"', warning=True)
+            self._print_service_message(f'Unable to change permissions for "{path}"', color=self.colors.yellow)
 
     def _remove_file(self, path: Path):
         """ Remove specified file from filesystem """
@@ -59,7 +61,7 @@ class ABC(abc.ABC):
         try:
             path.unlink()
         except PermissionError:
-            self._print_service_message(f'Unable to delete file "{path}"', warning=True)
+            self._print_service_message(f'Unable to delete file "{path}"', color=self.colors.yellow)
 
     def ask_to_continue(self) -> None:
         """ Receive agreement from user input to continue """
@@ -87,15 +89,15 @@ class ABC(abc.ABC):
             choices = []
 
             if default == 'all':
-                choices.append(self._colorize_string('all', color='green'))
+                choices.append(self._colorize_string('all', color=self.colors.green))
                 choices.append('|')
-                choices.append(self._colorize_string(' '.join(allowed_items), color='blue'))
+                choices.append(self._colorize_string(' '.join(allowed_items), color=self.colors.blue))
             else:
-                choices.append(self._colorize_string('all', color='blue'))
+                choices.append(self._colorize_string('all', color=self.colors.blue))
                 choices.append('|')
-                choices.append(self._colorize_string(default, color='green'))
+                choices.append(self._colorize_string(default, color=self.colors.green))
                 if len(allowed_items) != 1:
-                    choices.append(self._colorize_string(' '.join(allowed_items[1:]), color='blue'))
+                    choices.append(self._colorize_string(' '.join(allowed_items[1:]), color=self.colors.blue))
 
             choices = ' '.join(choices)
             user_input = input(f'Enter {items_name} from following: {choices}: ').replace(',', ' ').strip() or default
@@ -111,7 +113,7 @@ class ABC(abc.ABC):
                 items = allowed_items
 
             print(
-                f'\t{self.mark} processing {items_name}: {self._colorize_string(" ".join(items), color="green")}'
+                f'\t{self.mark} {items_name}: {self._colorize_string(", ".join(items), color=self.colors.green)}'
             )
 
         return items
@@ -125,3 +127,6 @@ class ABC(abc.ABC):
 class Configs:
     context: Dict = field(default_factory=dict)
     tasks: Dict = field(default_factory=dict)
+
+    def dict(self) -> Dict:
+        return asdict(self)

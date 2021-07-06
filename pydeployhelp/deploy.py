@@ -29,7 +29,7 @@ class Deploy(ABC):
                 self._print_service_message(
                     'Seems that Docker Compose v2 is enabled. Please disable it '
                     'via `docker-compose disable-v2` and try again',
-                    warning=True
+                    color=self.colors.yellow
                 )
             if return_code != 0:
                 raise InterruptedError
@@ -38,7 +38,7 @@ class Deploy(ABC):
         """ Controller for all operations performed by `pydeployhelp` """
 
         start_time = time.perf_counter()
-        self._print_service_message('Started deploy\n')
+        self._print_service_message('Started deploy\n', color=self.colors.green)
 
         try:
             self.validate_docker_binaries()
@@ -53,12 +53,15 @@ class Deploy(ABC):
 
             self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError):
-            self._print_service_message('\nFinished deploy', error=True)
+            self._print_service_message('\nFinished deploy', color=self.colors.red)
         else:
             compose_path = self.save_environment_compose(compose, deploy_targets, environ['env'])
             self.execute_pipeline(configs, environ, deploy_tasks)
             self._remove_file(compose_path)
-            self._print_service_message(f'Finished deploy. Processing time: {time.perf_counter() - start_time:.1f}s')
+            self._print_service_message(
+                f'\nFinished deploy. Processing time: {time.perf_counter() - start_time:.1f}s',
+                color=self.colors.green
+            )
 
     def load_configs(self, path: Union[str, Path]) -> Configs:
         """ Load deploy configs """
@@ -67,7 +70,7 @@ class Deploy(ABC):
 
         path = Path(path)
         if not path.exists():
-            self._print_service_message('Config file was not found, skipping', warning=True)
+            self._print_service_message('Config file was not found, skipping', color=self.colors.yellow)
         else:
             with path.open('r', encoding='utf-8') as fp:
                 configs_raw = YAML().load(fp)
@@ -75,7 +78,7 @@ class Deploy(ABC):
                 configs.tasks.update(configs_raw.get('tasks', {}))
 
         if not configs.tasks:
-            self._print_service_message('No tasks were found in configs', error=True)
+            self._print_service_message('No tasks were found in configs', color=self.colors.red)
             raise InterruptedError
 
         return configs
@@ -87,7 +90,7 @@ class Deploy(ABC):
 
         env_file = Path(env_file)
         if not env_file.exists():
-            self._print_service_message('.env file was not found, skipping', warning=True)
+            self._print_service_message('.env file was not found, skipping', color=self.colors.yellow)
         else:
             environ.update(read_env_file(env_file))
 
@@ -101,13 +104,13 @@ class Deploy(ABC):
 
         path = Path(path)
         if not path.exists():
-            self._print_service_message('compose file was not found, skipping', warning=True)
+            self._print_service_message('compose file was not found, skipping', color=self.colors.yellow)
         else:
             with path.open('r', encoding='utf-8') as fp:
                 compose = YAML().load(io.StringIO(Template(fp.read()).render(**environ)))
 
         if not compose.get('services'):
-            self._print_service_message('No services were found in docker-compose', error=True)
+            self._print_service_message('No services were found in docker-compose', color=self.colors.red)
             raise InterruptedError
 
         return compose
@@ -153,20 +156,18 @@ class Deploy(ABC):
         """ Execute commands from configs pipeline """
 
         for task in deploy_tasks:
-            self._print_service_message(f'Task "{task}": Started')
             for subtask in configs.tasks[task]:
                 subtask_name = f'{task}/{subtask["title"]}'
-                self._print_service_message(f'Subtask "{subtask_name}": Started')
+                self._print_service_message(f'Task "{subtask_name}": Started')
                 try:
                     for i, pipe in enumerate(subtask['pipeline']):
                         command = pipe.format(**environ)
                         print(f'Step {i + 1}: {command}\n')
                         os.system(command)
                 except Exception as e:
-                    self._print_service_message(f'Subtask "{subtask_name}": Skipping. {e}', error=True)
+                    self._print_service_message(f'Task "{subtask_name}": Skipping. {e}', color=self.colors.yellow)
                 else:
-                    self._print_service_message(f'Subtask "{subtask_name}": Finished')
-            self._print_service_message(f'Task "{task}": Finished')
+                    self._print_service_message(f'Task "{subtask_name}": Finished')
 
 
 def parse_args() -> argparse.Namespace:
@@ -195,10 +196,10 @@ def main():
     """ Main entrypoint, which will be called when executing `pydeployhelp` in console """
 
     args = parse_args()
-    if args.version:  # noqa
+    if args.version:
         print(f'pydeployhelp version {__version__}')
     else:
-        deploy = Deploy(deploydir=args.deploydir, silent=args.silent)  # noqa
+        deploy = Deploy(deploydir=args.deploydir, silent=args.silent)
         deploy.start()
 
 
