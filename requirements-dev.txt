@@ -1,3 +1,7 @@
 # see https://packaging.python.org/tutorials/packaging-projects/
 build
 twine
+
+# documentation
+sphinx
+sphinx_rtd_theme
