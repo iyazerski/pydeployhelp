@@ -19,7 +19,7 @@ Following CLI tools will be available after installation:
 Documentation
 -------------
 
-Please see the latest documentation at `Read the Docs <https://pydeployhelp.readthedocs.io/en/latest/>`__
+Please see the latest documentation at `Read the Docs <https://pydeployhelp.readthedocs.io/>`__
 
 Installation
 ------------
