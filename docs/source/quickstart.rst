@@ -16,6 +16,11 @@ Following CLI tools will be available after installation:
 -  ``pydeployhelp``: performs deploy according to info from deploy
    directory crated by ``pydeployhelp-quickstart``
 
+Documentation
+-------------
+
+Please see the latest documentation at `Read the Docs <https://pydeployhelp.readthedocs.io/en/latest/>`__
+
 Installation
 ------------
 

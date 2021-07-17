@@ -11,17 +11,21 @@ Following CLI tools will be available after installation:
 
 - `pydeployhelp`: performs deploy according to info from deploy directory crated by `pydeployhelp-quickstart`
 
+## Documentation
+
+Please see the latest documentation at [Read the Docs](https://pydeployhelp.readthedocs.io/en/latest)
+
 ## Installation
 
 `pydeployhelp` can be installed from `PyPi`:
 
-```properties
+```shell
 pip install pydeployhelp
 ```
 
 Or locally (inside project directory):
 
-```properties
+```shell
 python setup.py install
 ```
 
@@ -35,7 +39,7 @@ python setup.py install
 
 ### Updating to newer versions
 
-```properties
+```shell
 python -m pip install --upgrade --no-cache-dir pydeployhelp
 ```
 
