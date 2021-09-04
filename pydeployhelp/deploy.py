@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-import argparse
 import io
 import os
 import time
 from pathlib import Path
 from typing import List, Dict, Union
 
+import typer
 from jinja2 import Template
 from ruamel.yaml import YAML
 
@@ -29,16 +29,16 @@ class Deploy(ABC):
                 self._print_service_message(
                     'Seems that Docker Compose v2 is enabled. Please disable it '
                     'via `docker-compose disable-v2` and try again',
-                    color=self.colors.yellow
+                    color=typer.colors.YELLOW
                 )
             if return_code != 0:
-                raise InterruptedError
+                raise typer.Abort()
 
     def start(self):
         """ Controller for all operations performed by `pydeployhelp` """
 
         start_time = time.perf_counter()
-        self._print_service_message('Started deploy\n', color=self.colors.green)
+        self._print_service_message('Started deploy\n', color=typer.colors.GREEN, bold=True)
 
         try:
             self.validate_docker_binaries()
@@ -52,15 +52,16 @@ class Deploy(ABC):
             deploy_targets = self.enter_deploy_targets(compose)
 
             self.ask_to_continue()
-        except (KeyboardInterrupt, InterruptedError):
-            self._print_service_message('\nFinished deploy', color=self.colors.red)
+        except (KeyboardInterrupt, InterruptedError, RuntimeError):
+            self._print_service_message('\nFinished deploy', color=typer.colors.RED, bold=True)
         else:
             compose_path = self.save_environment_compose(compose, deploy_targets, environ['env'])
             self.execute_pipeline(configs, environ, deploy_tasks)
             self._remove_file(compose_path)
             self._print_service_message(
                 f'\nFinished deploy. Processing time: {time.perf_counter() - start_time:.1f}s',
-                color=self.colors.green
+                color=typer.colors.GREEN,
+                bold=True
             )
 
     def load_configs(self, path: Union[str, Path]) -> Configs:
@@ -70,7 +71,7 @@ class Deploy(ABC):
 
         path = Path(path)
         if not path.exists():
-            self._print_service_message('Config file was not found, skipping', color=self.colors.yellow)
+            self._print_service_message('Config file was not found, skipping', color=typer.colors.YELLOW)
         else:
             with path.open('r', encoding='utf-8') as fp:
                 configs_raw = YAML().load(fp)
@@ -78,8 +79,8 @@ class Deploy(ABC):
                 configs.tasks.update(configs_raw.get('tasks', {}))
 
         if not configs.tasks:
-            self._print_service_message('No tasks were found in configs', color=self.colors.red)
-            raise InterruptedError
+            self._print_service_message('No tasks were found in configs', color=typer.colors.RED)
+            raise typer.Abort()
 
         return configs
 
@@ -90,7 +91,7 @@ class Deploy(ABC):
 
         env_file = Path(env_file)
         if not env_file.exists():
-            self._print_service_message('.env file was not found, skipping', color=self.colors.yellow)
+            self._print_service_message('.env file was not found, skipping', color=typer.colors.YELLOW)
         else:
             environ.update(read_env_file(env_file))
 
@@ -104,13 +105,13 @@ class Deploy(ABC):
 
         path = Path(path)
         if not path.exists():
-            self._print_service_message('compose file was not found, skipping', color=self.colors.yellow)
+            self._print_service_message('compose file was not found, skipping', color=typer.colors.YELLOW)
         else:
             with path.open('r', encoding='utf-8') as fp:
                 compose = YAML().load(io.StringIO(Template(fp.read()).render(**environ)))
 
         if not compose.get('services'):
-            self._print_service_message('No services were found in docker-compose', color=self.colors.red)
+            self._print_service_message('No services were found in docker-compose', color=typer.colors.RED)
             raise InterruptedError
 
         return compose
@@ -162,46 +163,33 @@ class Deploy(ABC):
                 try:
                     for i, pipe in enumerate(subtask['pipeline']):
                         command = pipe.format(**environ)
-                        print(f'Step {i + 1}: {command}\n')
+                        typer.echo(f'Step {i + 1}: {command}\n')
                         os.system(command)
                 except Exception as e:
-                    self._print_service_message(f'Task "{subtask_name}": Skipping. {e}', color=self.colors.yellow)
+                    self._print_service_message(f'Task "{subtask_name}": Skipping. {e}', color=typer.colors.YELLOW)
                 else:
                     self._print_service_message(f'Task "{subtask_name}": Finished')
 
 
-def parse_args() -> argparse.Namespace:
-    """ Create stdin arguments parser and parse args from user input """
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-d', '--deploydir',
-        default='deploy',
-        help='Path to directory with deploy scripts (normally generated via `pydeployhelp-quickstart`)'
-    )
-    parser.add_argument(
-        '-s', '--silent',
-        action='store_true',
-        help='If specified, all communication with user will be ignored, default values will be used instead'
-    )
-    parser.add_argument(
-        '-v', '--version',
-        action='store_true',
-        help='Print version and exit'
-    )
-    return parser.parse_args()
-
-
-def main():
+def main(
+    deploydir: str = typer.Option(
+        'deploy', help='Path to directory with deploy scripts (normally generated via `pydeployhelp-quickstart`)'
+    ),
+    silent: bool = typer.Option(False, help='Ignore all communication with user and use default values'),
+    version: bool = typer.Option(False, help='Print version and exit')
+):
     """ Main entrypoint, which will be called when executing `pydeployhelp` in console """
 
-    args = parse_args()
-    if args.version:
-        print(f'pydeployhelp version {__version__}')
+    if version:
+        typer.echo(f'pydeployhelp version {__version__}')
     else:
-        deploy = Deploy(deploydir=args.deploydir, silent=args.silent)
+        deploy = Deploy(deploydir=deploydir, silent=silent)
         deploy.start()
 
 
+def run():
+    typer.run(main)
+
+
 if __name__ == '__main__':
-    main()
+    run()

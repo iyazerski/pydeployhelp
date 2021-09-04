@@ -1,3 +1,3 @@
 ruamel.yaml>=0.16,<0.19
 jinja2>=3,<3.2
-sty
+typer>=0.4,<0.5

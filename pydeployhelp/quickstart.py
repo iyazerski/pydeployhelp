@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-import argparse
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Set, List
 
+import typer
 from ruamel.yaml import YAML
 
 from pydeployhelp import __version__
@@ -47,24 +47,24 @@ class Quickstart(ABC):
             deploy_dir = self.enter_deploy_dir()
             deploy_tasks = self.enter_deploy_tasks()
             self.ask_to_continue()
-        except (KeyboardInterrupt, InterruptedError):
-            self._print_service_message('Interrupted', color=self.colors.red)
+        except (KeyboardInterrupt, InterruptedError, RuntimeError):
+            self._print_service_message('Interrupted', color=typer.colors.RED, bold=True)
         else:
             self._print_service_message(
                 f'Creating service files for project "{project_name}" at "{deploy_dir}":',
-                color=self.colors.green
+                color=typer.colors.GREEN
             )
             self.create_config_file(deploy_dir, deploy_tasks)
             self.create_dockerfile(deploy_dir, project_name)
             self.create_compose(deploy_dir, project_name)
-            self._print_service_message('Done!', color=self.colors.green)
+            self._print_service_message('Done!', color=typer.colors.GREEN, bold=True)
 
     def enter_project_name(self) -> str:
         """ Receive project name from user input """
 
         project_name = Path(os.getcwd()).name
         if not self.silent:
-            project_name = input(f'Enter project name [{project_name}]: ').strip() or project_name
+            project_name = typer.prompt('Enter project name', default=project_name)
         return project_name
 
     def enter_deploy_dir(self) -> Path:
@@ -72,19 +72,19 @@ class Quickstart(ABC):
 
         deploy_dir = self.defaults.deploy_dir
         if not self.silent:
-            deploy_dir = input(
-                f'Enter directory path where deploy scripts should be created [{deploy_dir}]: '
-            ).strip() or deploy_dir
+            deploy_dir = typer.prompt(
+                'Enter directory path where deploy scripts should be created', default=deploy_dir
+            )
 
         deploy_dir = Path(deploy_dir)
         if deploy_dir.exists() and not deploy_dir.is_dir():
             self._print_service_message(
                 f'"{deploy_dir}"" is not a valid directory path, please try again',
-                color=self.colors.red
+                color=typer.colors.RED
             )
 
             if self.silent:
-                raise InterruptedError  # prevent from RecursionError
+                raise typer.Abort()  # prevent from RecursionError
 
             return self.enter_deploy_dir()
 
@@ -117,7 +117,7 @@ class Quickstart(ABC):
             yaml.dump(configs.dict(), fp)
 
         self._add_permissions(configs_path)
-        self._print_service_message('\tconfigs\t\t\N{check mark}', color=self.colors.green)
+        self._print_service_message('\tconfigs\t\t\N{check mark}', color=typer.colors.GREEN)
 
     def create_dockerfile(self, deploy_dir: Path, project_name: str):
         """ Create file with instructions for Docker daemon to build an image """
@@ -128,7 +128,7 @@ class Quickstart(ABC):
                 fp.write(f'{line.strip()}\n')
 
         self._add_permissions(dockerfile_path)
-        self._print_service_message('\tdockerfile\t\N{check mark}', color=self.colors.green)
+        self._print_service_message('\tdockerfile\t\N{check mark}', color=typer.colors.GREEN)
 
     def create_compose(self, deploy_dir: Path, project_name: str):
         data = {
@@ -151,32 +151,23 @@ class Quickstart(ABC):
             yaml.dump(data, fp)
 
         self._add_permissions(compose_path)
-        self._print_service_message('\tdocker-compose\t\N{check mark}', color=self.colors.green)
+        self._print_service_message('\tdocker-compose\t\N{check mark}', color=typer.colors.GREEN)
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '-s', '--silent',
-        action='store_true',
-        help='If specified, all communication with user will be ignored, default values will be used instead'
-    )
-    parser.add_argument(
-        '-v', '--version',
-        action='store_true',
-        help='Print version and exit'
-    )
-    return parser.parse_args()
-
-
-def main():
-    args = parse_args()
-    if args.version:
-        print(f'pydeployhelp-quickstart version {__version__}')
+def main(
+    silent: bool = typer.Option(False, help='Ignore all communication with user and use default values'),
+    version: bool = typer.Option(False, help='Print version and exit')
+):
+    if version:
+        typer.echo(f'pydeployhelp-quickstart version {__version__}')
     else:
-        quickstart = Quickstart(silent=args.silent)
+        quickstart = Quickstart(silent=silent)
         quickstart.start()
 
 
-if __name__ == "__main__":
-    main()
+def run():
+    typer.run(main)
+
+
+if __name__ == '__main__':
+    run()

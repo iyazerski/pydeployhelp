@@ -11,8 +11,8 @@ with open('requirements.txt', 'r', encoding='utf-8') as fp:
 setuptools.setup(
     name='pydeployhelp',
     version=__version__,
-    author='Igor Ezersky',
-    author_email='igor.ezersky.private@gmail.com',
+    author='Ihar Yazerski',
+    author_email='ihar.yazerski@outlook.com',
     description='Deploy helper for Python projects',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -26,8 +26,8 @@ setuptools.setup(
     ],
     entry_points={
         'console_scripts': [
-            'pydeployhelp = pydeployhelp.deploy:main',
-            'pydeployhelp-quickstart = pydeployhelp.quickstart:main'
+            'pydeployhelp = pydeployhelp.deploy:run',
+            'pydeployhelp-quickstart = pydeployhelp.quickstart:run'
         ]
     },
     python_requires='>=3.6',

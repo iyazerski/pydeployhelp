@@ -3,19 +3,7 @@ from dataclasses import dataclass, field, asdict
 from pathlib import Path
 from typing import Dict, List
 
-from sty import fg, Style
-
-
-@dataclass
-class Colors:
-    black: Style = field(default=fg.black)
-    red: Style = field(default=fg.red)
-    green: Style = field(default=fg.green)
-    yellow: Style = field(default=fg.yellow)
-    blue: Style = field(default=fg.blue)
-    magenta: Style = field(default=fg.magenta)
-    cyan: Style = field(default=fg.cyan)
-    white: Style = field(default=fg.white)
+import typer
 
 
 class ABC(abc.ABC):
@@ -23,28 +11,12 @@ class ABC(abc.ABC):
 
     def __init__(self, silent: bool = False):
         self.silent = silent
-        self.colors = Colors()
-        self.mark = self._colorize_string('\N{check mark}', color=self.colors.green)
 
-    def _colorize_string(self, text: str, color: Style = None) -> str:
-        """ Colorize `text`
-
-        Parameters
-        ----------
-
-        text : str
-            Text to be colorized
-        color : str, default=white
-            Text color. Choices: black, red, green, yellow, blue, magenta, cyan, white
-        """
-
-        return (color or self.colors.white) + text + fg.rs
-
-    def _print_service_message(self, message: str, force: bool = False, **kwargs):
+    def _print_service_message(self, message: str, force: bool = False, color: str = typer.colors.WHITE, **kwargs):
         """ Print colorized messages """
 
         if not self.silent or force:
-            print(self._colorize_string(message, **kwargs))
+            typer.echo(typer.style(message, fg=color, **kwargs))
 
     def _add_permissions(self, path: Path):
         """ Add full permissions (rwx) for all users (ugo) to specified file.
@@ -53,7 +25,7 @@ class ABC(abc.ABC):
         try:
             path.chmod(0o777)  # TODO: use permissions from params
         except PermissionError:
-            self._print_service_message(f'Unable to change permissions for "{path}"', color=self.colors.yellow)
+            self._print_service_message(f'Unable to change permissions for "{path}"', color=typer.colors.YELLOW)
 
     def _remove_file(self, path: Path):
         """ Remove specified file from filesystem """
@@ -61,21 +33,14 @@ class ABC(abc.ABC):
         try:
             path.unlink()
         except PermissionError:
-            self._print_service_message(f'Unable to delete file "{path}"', color=self.colors.yellow)
+            self._print_service_message(f'Unable to delete file "{path}"', color=typer.colors.YELLOW)
 
     def ask_to_continue(self) -> None:
         """ Receive agreement from user input to continue """
 
-        agreement = input('Do you agree to start processing (yes or no)? [yes]: ').strip().lower() or 'yes'
-        agree = None
-        if agreement == 'yes':
-            agree = True
-        elif agreement == 'no':
-            agree = False
-        else:
-            self.ask_to_continue()
+        agree = typer.confirm('Do you agree to start processing?')
         if not agree:
-            raise InterruptedError
+            raise typer.Abort()
 
     def enter(self, allowed_items: List[str], default: str, items_name: str) -> List[str]:
         """ Receive answer from user input for provided list of available choices """
@@ -89,18 +54,18 @@ class ABC(abc.ABC):
             choices = []
 
             if default == 'all':
-                choices.append(self._colorize_string('all', color=self.colors.green))
+                choices.append(typer.style('all', fg=typer.colors.GREEN))
                 choices.append('|')
-                choices.append(self._colorize_string(' '.join(allowed_items), color=self.colors.blue))
+                choices.append(typer.style(' '.join(allowed_items), fg=typer.colors.BLUE))
             else:
-                choices.append(self._colorize_string('all', color=self.colors.blue))
+                choices.append(typer.style('all', fg=typer.colors.BLUE))
                 choices.append('|')
-                choices.append(self._colorize_string(default, color=self.colors.green))
+                choices.append(typer.style(default, fg=typer.colors.GREEN))
                 if len(allowed_items) != 1:
-                    choices.append(self._colorize_string(' '.join(allowed_items[1:]), color=self.colors.blue))
+                    choices.append(typer.style(' '.join(allowed_items[1:]), fg=typer.colors.BLUE))
 
             choices = ' '.join(choices)
-            user_input = input(f'Enter {items_name} from following: {choices}: ').replace(',', ' ').strip() or default
+            user_input = typer.prompt(f'Enter {items_name} from following: {choices}', default=default)
             items = list(filter(
                 lambda x: x in allowed_items or x == 'all',
                 [item.strip().lower() for item in user_input.split()]
@@ -112,8 +77,8 @@ class ABC(abc.ABC):
             if 'all' in items:
                 items = allowed_items
 
-            print(
-                f'\t{self.mark} {items_name}: {self._colorize_string(", ".join(items), color=self.colors.green)}'
+            typer.echo(
+                f'\t{items_name}: {typer.style(", ".join(items), fg=typer.colors.GREEN)}'
             )
 
         return items
