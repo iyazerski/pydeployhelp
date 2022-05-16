@@ -18,19 +18,13 @@ class Deploy(ABC):
     def __init__(self, deploydir: str = 'deploy', *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.deploydir = Path(deploydir)
-        self.docker_compose_v2_exit_code = 4096
 
-    def validate_docker_binaries(self):
+    @staticmethod
+    def validate_docker_binaries():
         """ Check that all required binaries exist and are accessible by current user """
 
-        for binary in ['docker', 'docker-compose']:
-            return_code = os.system(f'{binary} -v')
-            if return_code == self.docker_compose_v2_exit_code:
-                self._print_service_message(
-                    'Seems that Docker Compose v2 is enabled. Please disable it '
-                    'via `docker-compose disable-v2` and try again',
-                    color=typer.colors.YELLOW
-                )
+        for binary in ['docker', 'docker compose']:
+            return_code = os.system(f'{binary} version')
             if return_code != 0:
                 raise typer.Abort()
 
