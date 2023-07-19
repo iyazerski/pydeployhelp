@@ -5,3 +5,9 @@ twine
 # documentation
 sphinx
 sphinx_rtd_theme
+
+# debug
+ipython
+
+# requirements
+pip-tools
