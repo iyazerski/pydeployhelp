@@ -3,7 +3,8 @@ import io
 import os
 import time
 from pathlib import Path
-from typing import List, Dict, Union
+from typing import Union
+from typing_extensions import Annotated
 
 import typer
 from jinja2 import Template
@@ -15,8 +16,10 @@ from pydeployhelp.utils import read_env_file
 
 
 class Deploy(ABC):
-    def __init__(self, deploydir: str = 'deploy', *args, **kwargs):
+    def __init__(self, tasks: list[str] = None, targets: list[str] = None, deploydir: str = 'deploy', *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.tasks = tasks
+        self.targets = targets
         self.deploydir = Path(deploydir)
 
     @staticmethod
@@ -45,7 +48,8 @@ class Deploy(ABC):
             deploy_tasks = self.enter_deploy_tasks(configs)
             deploy_targets = self.enter_deploy_targets(compose)
 
-            self.ask_to_continue()
+            if deploy_tasks != self.tasks or deploy_targets != self.targets:
+                self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError, RuntimeError):
             self._print_service_message('\nFinished deploy', color=typer.colors.RED, bold=True)
         else:
@@ -78,7 +82,7 @@ class Deploy(ABC):
 
         return configs
 
-    def load_environ(self, env_file: Union[str, Path]) -> Dict:
+    def load_environ(self, env_file: Union[str, Path]) -> dict:
         """ Load environment variables from .env files (if exists) """
 
         environ = {}
@@ -92,7 +96,7 @@ class Deploy(ABC):
         environ['env'] = environ.get('ENV', 'latest')
         return environ
 
-    def load_compose(self, path: Union[str, Path], environ: Dict) -> Dict:
+    def load_compose(self, path: Union[str, Path], environ: dict) -> dict:
         """ Load docker-compose data """
 
         compose = {}
@@ -110,19 +114,29 @@ class Deploy(ABC):
 
         return compose
 
-    def enter_deploy_tasks(self, configs: Configs) -> List[str]:
+    def enter_deploy_tasks(self, configs: Configs) -> list[str]:
         """ Receive deploy tasks names from user input """
 
         allowed_tasks = list(configs.tasks)
+        extended_allowed_tasks = [*allowed_tasks, 'all']
+
+        if self.tasks and all(el in extended_allowed_tasks for el in self.tasks):
+            return self.tasks
+
         return self.enter(allowed_items=allowed_tasks, default=allowed_tasks[0], items_name='deploy tasks')
 
-    def enter_deploy_targets(self, compose: Dict) -> List[str]:
+    def enter_deploy_targets(self, compose: dict) -> list[str]:
         """ Receive deploy targets names from user input """
 
         allowed_targets = list(compose['services'])
+        extended_allowed_tasks = [*allowed_targets, 'all']
+
+        if self.targets and all(el in extended_allowed_tasks for el in self.targets):
+            return self.targets
+
         return self.enter(allowed_items=allowed_targets, default='all', items_name='deploy targets')
 
-    def save_environment_compose(self, compose: Dict, deploy_targets: List[str], env: str) -> Path:
+    def save_environment_compose(self, compose: dict, deploy_targets: list[str], env: str) -> Path:
         """ Filter docker-compose services according to `deploy_targets`,
         rename main components according to `env` and save to new file """
 
@@ -147,7 +161,7 @@ class Deploy(ABC):
         self._add_permissions(compose_path)
         return compose_path
 
-    def execute_pipeline(self, configs: Configs, environ: Dict, deploy_tasks: List[str]) -> None:
+    def execute_pipeline(self, configs: Configs, environ: dict, deploy_tasks: list[str]) -> None:
         """ Execute commands from configs pipeline """
 
         for task in deploy_tasks:
@@ -166,18 +180,20 @@ class Deploy(ABC):
 
 
 def main(
-    deploydir: str = typer.Option(
-        'deploy', help='Path to directory with deploy scripts (normally generated via `pydeployhelp-quickstart`)'
-    ),
-    silent: bool = typer.Option(False, help='Ignore all communication with user and use default values'),
-    version: bool = typer.Option(False, help='Print version and exit')
+    task: Annotated[list[str], typer.Option(help='List of deployment tasks defined in config.yaml')] = (),
+    target: Annotated[list[str], typer.Option(help='List of deployment targets defined in config.yaml')] = (),
+    deploydir: Annotated[str, typer.Option(
+        help='Path to directory with deploy scripts (normally generated via `pydeployhelp-quickstart`)'
+    )] = 'deploy',
+    silent: Annotated[bool, typer.Option(help='Ignore all communication with user and use default values')] = False,
+    version: Annotated[bool, typer.Option(help='Print version and exit')] = False
 ):
     """ Main entrypoint, which will be called when executing `pydeployhelp` in console """
 
     if version:
         typer.echo(f'pydeployhelp version {__version__}')
     else:
-        deploy = Deploy(deploydir=deploydir, silent=silent)
+        deploy = Deploy(tasks=task, targets=target, deploydir=deploydir, silent=silent)
         deploy.start()
 
 
