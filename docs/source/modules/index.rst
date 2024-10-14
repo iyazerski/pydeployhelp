@@ -24,11 +24,3 @@ quickstart.py
    :members:
    :undoc-members:
    :show-inheritance:
-
-utils.py
---------
-
-.. automodule:: pydeployhelp.utils
-   :members:
-   :undoc-members:
-   :show-inheritance:
