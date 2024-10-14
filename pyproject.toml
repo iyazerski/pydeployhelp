@@ -1,15 +1,11 @@
-[build-system]
-requires = ["setuptools", "setuptools-scm"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "pydeployhelp"
 authors = [
     {name = "Ihar Yazerski", email = "ihar.yazerski@gmail.com"},
 ]
-description = "Deploy helper for Python projects"
+description = "CLI tool that helps integrating deploy (via Docker) to Python projects"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "MIT License"}
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -18,19 +14,36 @@ classifiers = [
 ]
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
+
 [project.scripts]
 pydeployhelp = "pydeployhelp.deploy:run"
 pydeployhelp-quickstart = "pydeployhelp.quickstart:run"
 
+
 [project.urls]
-"Homepage" = "https://github.com/igorezersky/pydeployhelp"
+"Homepage" = "https://github.com/iyazerski/pydeployhelp"
 
-[tool.setuptools]
-packages = ["pydeployhelp"]
 
-[tool.setuptools.dynamic]
-version = {attr = "pydeployhelp.__version__"}
-dependencies = {file = ["requirements/prod.txt"]}
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
-[tool.setuptools.dynamic.optional-dependencies]
-dev = {file = ["requirements/dev.txt"]}
+
+[tool.poetry]
+name = "pydeployhelp"
+version = "0.1.5"
+description = "CLI tool that helps integrating deploy (via Docker) to Python projects"
+authors = ["Ihar Yazerski <ihar.yazerski@gmail.com>"]
+readme = "README.md"
+
+
+[tool.poetry.dependencies]
+python = "^3.10"
+typer = "^0.12.5"
+jinja2 = "^3.1.4"
+
+
+[tool.poetry.group.dev.dependencies]
+ipython = "^8.28.0"
+pre-commit = "^4.0.1"
+ruff = "^0.6.9"
