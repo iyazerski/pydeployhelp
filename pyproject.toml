@@ -26,9 +26,18 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "pydeployhelp"
-version = "1.5.0"
 description = "CLI tool that helps integrating deploy (via Docker) to Python projects"
 authors = ["Ihar Yazerski <ihar.yazerski@gmail.com>"]
+readme = "README.md"
+homepage = "https://github.com/iyazerski/pydeployhelp"
+repository = "https://github.com/iyazerski/pydeployhelp"
+license = "MIT"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+version = "1.5.0"
 
 
 [tool.poetry.dependencies]
