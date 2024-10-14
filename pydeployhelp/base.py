@@ -6,7 +6,7 @@ from pathlib import Path
 import typer
 
 
-class ABC(abc.ABC):
+class CLIBase(abc.ABC):
     """Parent class for all CLI tools, contains common methods related to user i/o"""
 
     def __init__(self, silent: bool = False) -> None:

@@ -7,7 +7,7 @@ import typer
 from ruamel.yaml import YAML
 
 from pydeployhelp import __version__
-from pydeployhelp.base import ABC, Configs
+from pydeployhelp.base import CLIBase, Configs
 
 
 @dataclass
@@ -17,7 +17,7 @@ class QuickstartDefaults:
     dockerfile: str
 
 
-class Quickstart(ABC):
+class Quickstart(CLIBase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.defaults = QuickstartDefaults(

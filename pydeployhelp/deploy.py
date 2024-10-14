@@ -12,10 +12,10 @@ from dotenv import dotenv_values
 from ruamel.yaml import YAML
 
 from pydeployhelp import __version__
-from pydeployhelp.base import ABC, Configs
+from pydeployhelp.base import CLIBase, Configs
 
 
-class Deploy(ABC):
+class Deploy(CLIBase):
     def __init__(
         self,
         tasks: list[str] = None,
