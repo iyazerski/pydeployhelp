@@ -2,7 +2,6 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Set, List
 
 import typer
 from ruamel.yaml import YAML
@@ -14,12 +13,12 @@ from pydeployhelp.base import ABC, Configs
 @dataclass
 class QuickstartDefaults:
     deploy_dir: str
-    deploy_tasks: Set[str]
+    deploy_tasks: set[str]
     dockerfile: str
 
 
 class Quickstart(ABC):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.defaults = QuickstartDefaults(
             deploy_dir="deploy",
@@ -39,7 +38,7 @@ class Quickstart(ABC):
             """,
         )
 
-    def start(self):
+    def start(self) -> None:
         """Receive info from user input and create deploy directory scripts"""
 
         try:
@@ -89,13 +88,13 @@ class Quickstart(ABC):
 
         return deploy_dir
 
-    def enter_deploy_tasks(self) -> List[str]:
+    def enter_deploy_tasks(self) -> list[str]:
         """Receive deploy tasks names from user input"""
 
         allowed_tasks = list(self.defaults.deploy_tasks)
         return self.enter(allowed_items=allowed_tasks, default="all", items_name="deploy tasks")
 
-    def create_config_file(self, deploy_dir: Path, deploy_tasks: List[str]):
+    def create_config_file(self, deploy_dir: Path, deploy_tasks: list[str]) -> None:
         """Create file with deploy configs and tasks pipeline"""
 
         configs = Configs(
@@ -120,7 +119,7 @@ class Quickstart(ABC):
         self._add_permissions(configs_path)
         self._print_service_message("\tconfigs\t\t\N{CHECK MARK}", color=typer.colors.GREEN)
 
-    def create_dockerfile(self, deploy_dir: Path, project_name: str):
+    def create_dockerfile(self, deploy_dir: Path, project_name: str) -> None:
         """Create file with instructions for Docker daemon to build an image"""
 
         dockerfile_path = Path(f"{deploy_dir}/Dockerfile")
@@ -131,7 +130,7 @@ class Quickstart(ABC):
         self._add_permissions(dockerfile_path)
         self._print_service_message("\tdockerfile\t\N{CHECK MARK}", color=typer.colors.GREEN)
 
-    def create_compose(self, deploy_dir: Path, project_name: str):
+    def create_compose(self, deploy_dir: Path, project_name: str) -> None:
         data = {
             "version": "3",
             "services": {
@@ -155,7 +154,7 @@ class Quickstart(ABC):
 def main(
     silent: bool = typer.Option(False, help="Ignore all communication with user and use default values"),
     version: bool = typer.Option(False, help="Print version and exit"),
-):
+) -> None:
     if version:
         typer.echo(f"pydeployhelp-quickstart version {__version__}")
     else:
@@ -163,7 +162,7 @@ def main(
         quickstart.start()
 
 
-def run():
+def run() -> None:
     typer.run(main)
 
 

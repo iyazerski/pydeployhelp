@@ -1,7 +1,7 @@
 import abc
+import typing as t
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Dict, List
 
 import typer
 
@@ -9,16 +9,18 @@ import typer
 class ABC(abc.ABC):
     """Parent class for all CLI tools, contains common methods related to user i/o"""
 
-    def __init__(self, silent: bool = False):
+    def __init__(self, silent: bool = False) -> None:
         self.silent = silent
 
-    def _print_service_message(self, message: str, force: bool = False, color: str = typer.colors.WHITE, **kwargs):
+    def _print_service_message(
+        self, message: str, force: bool = False, color: str = typer.colors.WHITE, **kwargs: t.Any
+    ) -> None:
         """Print colorized messages"""
 
         if not self.silent or force:
             typer.echo(typer.style(message, fg=color, **kwargs))
 
-    def _add_permissions(self, path: Path):
+    def _add_permissions(self, path: Path) -> None:
         """Add full permissions (rwx) for all users (ugo) to specified file.
         This can be necessary for correct file deletion"""
 
@@ -27,7 +29,7 @@ class ABC(abc.ABC):
         except PermissionError:
             self._print_service_message(f'Unable to change permissions for "{path}"', color=typer.colors.YELLOW)
 
-    def _remove_file(self, path: Path):
+    def _remove_file(self, path: Path) -> None:
         """Remove specified file from filesystem"""
 
         try:
@@ -35,14 +37,15 @@ class ABC(abc.ABC):
         except PermissionError:
             self._print_service_message(f'Unable to delete file "{path}"', color=typer.colors.YELLOW)
 
-    def ask_to_continue(self) -> None:
+    @staticmethod
+    def ask_to_continue() -> None:
         """Receive agreement from user input to continue"""
 
         agree = typer.confirm("Do you agree to start processing?")
         if not agree:
             raise typer.Abort()
 
-    def enter(self, allowed_items: List[str], default: str, items_name: str) -> List[str]:
+    def enter(self, allowed_items: list[str], default: str, items_name: str) -> list[str]:
         """Receive answer from user input for provided list of available choices"""
 
         if self.silent:
@@ -51,7 +54,7 @@ class ABC(abc.ABC):
             else:
                 items = [default]
         else:
-            choices = []
+            choices: list[str] = []
 
             if default == "all":
                 choices.append(typer.style("all", fg=typer.colors.GREEN))
@@ -64,8 +67,8 @@ class ABC(abc.ABC):
                 if len(allowed_items) != 1:
                     choices.append(typer.style(" ".join(allowed_items[1:]), fg=typer.colors.BLUE))
 
-            choices = " ".join(choices)
-            user_input = typer.prompt(f"Enter {items_name} from following: {choices}", default=default)
+            choices_s = " ".join(choices)
+            user_input = typer.prompt(f"Enter {items_name} from following: {choices_s}", default=default)
             items = list(
                 filter(
                     lambda x: x in allowed_items or x == "all", [item.strip().lower() for item in user_input.split()]
@@ -83,13 +86,14 @@ class ABC(abc.ABC):
         return items
 
     @abc.abstractmethod
-    def start(self): ...
+    def start(self) -> None:
+        raise NotImplementedError
 
 
 @dataclass
 class Configs:
-    context: Dict = field(default_factory=dict)
-    tasks: Dict = field(default_factory=dict)
+    context: dict = field(default_factory=dict)
+    tasks: dict = field(default_factory=dict)
 
-    def dict(self) -> Dict:
+    def dict(self) -> dict:
         return asdict(self)

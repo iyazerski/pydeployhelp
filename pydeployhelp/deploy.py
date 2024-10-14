@@ -3,27 +3,34 @@ import io
 import os
 import time
 from pathlib import Path
-from typing import Union
+import typing as t
 from typing_extensions import Annotated
 
 import typer
 from jinja2 import Template
+from dotenv import dotenv_values
 from ruamel.yaml import YAML
 
 from pydeployhelp import __version__
 from pydeployhelp.base import ABC, Configs
-from pydeployhelp.utils import read_env_file
 
 
 class Deploy(ABC):
-    def __init__(self, tasks: list[str] = None, targets: list[str] = None, deploydir: str = "deploy", *args, **kwargs):
+    def __init__(
+        self,
+        tasks: list[str] = None,
+        targets: list[str] = None,
+        deploydir: str = "deploy",
+        *args: t.Any,
+        **kwargs: t.Any,
+    ):
         super().__init__(*args, **kwargs)
         self.tasks = tasks
         self.targets = targets
         self.deploydir = Path(deploydir)
 
     @staticmethod
-    def validate_docker_binaries():
+    def validate_docker_binaries() -> None:
         """Check that all required binaries exist and are accessible by current user"""
 
         for binary in ["docker", "docker compose"]:
@@ -31,7 +38,7 @@ class Deploy(ABC):
             if return_code != 0:
                 raise typer.Abort()
 
-    def start(self):
+    def start(self) -> None:
         """Controller for all operations performed by `pydeployhelp`"""
 
         start_time = time.perf_counter()
@@ -62,7 +69,7 @@ class Deploy(ABC):
                 bold=True,
             )
 
-    def load_configs(self, path: Union[str, Path]) -> Configs:
+    def load_configs(self, path: str | Path) -> Configs:
         """Load deploy configs"""
 
         configs = Configs()
@@ -82,7 +89,7 @@ class Deploy(ABC):
 
         return configs
 
-    def load_environ(self, env_file: Union[str, Path]) -> dict:
+    def load_environ(self, env_file: str | Path) -> dict[str, t.Any]:
         """Load environment variables from .env files (if exists)"""
 
         environ = {}
@@ -91,12 +98,12 @@ class Deploy(ABC):
         if not env_file.exists():
             self._print_service_message(".env file was not found, skipping", color=typer.colors.YELLOW)
         else:
-            environ.update(read_env_file(env_file))
+            environ.update(dotenv_values(env_file))
 
         environ["env"] = environ.get("ENV", "latest")
         return environ
 
-    def load_compose(self, path: Union[str, Path], environ: dict) -> dict:
+    def load_compose(self, path: str | Path, environ: dict[str, t.Any]) -> dict[str, t.Any]:
         """Load docker-compose data"""
 
         compose = {}
@@ -125,7 +132,7 @@ class Deploy(ABC):
 
         return self.enter(allowed_items=allowed_tasks, default=allowed_tasks[0], items_name="deploy tasks")
 
-    def enter_deploy_targets(self, compose: dict) -> list[str]:
+    def enter_deploy_targets(self, compose: dict[str, t.Any]) -> list[str]:
         """Receive deploy targets names from user input"""
 
         allowed_targets = list(compose["services"])
@@ -136,7 +143,7 @@ class Deploy(ABC):
 
         return self.enter(allowed_items=allowed_targets, default="all", items_name="deploy targets")
 
-    def save_environment_compose(self, compose: dict, deploy_targets: list[str], env: str) -> Path:
+    def save_environment_compose(self, compose: dict[str, t.Any], deploy_targets: list[str], env: str) -> Path:
         """Filter docker-compose services according to `deploy_targets`,
         rename main components according to `env` and save to new file"""
 
@@ -161,7 +168,7 @@ class Deploy(ABC):
         self._add_permissions(compose_path)
         return compose_path
 
-    def execute_pipeline(self, configs: Configs, environ: dict, deploy_tasks: list[str]) -> None:
+    def execute_pipeline(self, configs: Configs, environ: dict[str, t.Any], deploy_tasks: list[str]) -> None:
         """Execute commands from configs pipeline"""
 
         for task in deploy_tasks:
@@ -188,7 +195,7 @@ def main(
     ] = "deploy",
     silent: Annotated[bool, typer.Option(help="Ignore all communication with user and use default values")] = False,
     version: Annotated[bool, typer.Option(help="Print version and exit")] = False,
-):
+) -> None:
     """Main entrypoint, which will be called when executing `pydeployhelp` in console"""
 
     if version:
@@ -198,7 +205,7 @@ def main(
         deploy.start()
 
 
-def run():
+def run() -> None:
     typer.run(main)
 
 
