@@ -22,8 +22,8 @@ class Quickstart(ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.defaults = QuickstartDefaults(
-            deploy_dir='deploy',
-            deploy_tasks={'build', 'up', 'down'},
+            deploy_dir="deploy",
+            deploy_tasks={"build", "up", "down"},
             dockerfile="""# use some base image
             FROM python:buster
 
@@ -36,11 +36,11 @@ class Quickstart(ABC):
 
             # copy files from host to image
             COPY requirements.txt .
-            """
+            """,
         )
 
     def start(self):
-        """ Receive info from user input and create deploy directory scripts """
+        """Receive info from user input and create deploy directory scripts"""
 
         try:
             project_name = self.enter_project_name()
@@ -48,39 +48,35 @@ class Quickstart(ABC):
             deploy_tasks = self.enter_deploy_tasks()
             self.ask_to_continue()
         except (KeyboardInterrupt, InterruptedError, RuntimeError):
-            self._print_service_message('Interrupted', color=typer.colors.RED, bold=True)
+            self._print_service_message("Interrupted", color=typer.colors.RED, bold=True)
         else:
             self._print_service_message(
-                f'Creating service files for project "{project_name}" at "{deploy_dir}":',
-                color=typer.colors.GREEN
+                f'Creating service files for project "{project_name}" at "{deploy_dir}":', color=typer.colors.GREEN
             )
             self.create_config_file(deploy_dir, deploy_tasks)
             self.create_dockerfile(deploy_dir, project_name)
             self.create_compose(deploy_dir, project_name)
-            self._print_service_message('Done!', color=typer.colors.GREEN, bold=True)
+            self._print_service_message("Done!", color=typer.colors.GREEN, bold=True)
 
     def enter_project_name(self) -> str:
-        """ Receive project name from user input """
+        """Receive project name from user input"""
 
         project_name = Path(os.getcwd()).name
         if not self.silent:
-            project_name = typer.prompt('Enter project name', default=project_name)
+            project_name = typer.prompt("Enter project name", default=project_name)
         return project_name
 
     def enter_deploy_dir(self) -> Path:
-        """ Receive deploy directory path from user input """
+        """Receive deploy directory path from user input"""
 
         deploy_dir = self.defaults.deploy_dir
         if not self.silent:
-            deploy_dir = typer.prompt(
-                'Enter directory path where deploy scripts should be created', default=deploy_dir
-            )
+            deploy_dir = typer.prompt("Enter directory path where deploy scripts should be created", default=deploy_dir)
 
         deploy_dir = Path(deploy_dir)
         if deploy_dir.exists() and not deploy_dir.is_dir():
             self._print_service_message(
-                f'"{deploy_dir}"" is not a valid directory path, please try again',
-                color=typer.colors.RED
+                f'"{deploy_dir}"" is not a valid directory path, please try again', color=typer.colors.RED
             )
 
             if self.silent:
@@ -94,72 +90,74 @@ class Quickstart(ABC):
         return deploy_dir
 
     def enter_deploy_tasks(self) -> List[str]:
-        """ Receive deploy tasks names from user input """
+        """Receive deploy tasks names from user input"""
 
         allowed_tasks = list(self.defaults.deploy_tasks)
-        return self.enter(allowed_items=allowed_tasks, default='all', items_name='deploy tasks')
+        return self.enter(allowed_items=allowed_tasks, default="all", items_name="deploy tasks")
 
     def create_config_file(self, deploy_dir: Path, deploy_tasks: List[str]):
-        """ Create file with deploy configs and tasks pipeline """
+        """Create file with deploy configs and tasks pipeline"""
 
         configs = Configs(
-            context=dict(env_file='.env', compose=f'{deploy_dir}/docker-compose-template.j2'),
-            tasks={task: [dict(
-                title=f'{task} all',
-                pipeline=[f'docker-compose -f {deploy_dir}/docker-compose-{"{ENV}"}.yml {task}']
-            )] for task in deploy_tasks}
+            context=dict(env_file=".env", compose=f"{deploy_dir}/docker-compose-template.j2"),
+            tasks={
+                task: [
+                    dict(
+                        title=f"{task} all",
+                        pipeline=[f'docker-compose -f {deploy_dir}/docker-compose-{"{ENV}"}.yml {task}'],
+                    )
+                ]
+                for task in deploy_tasks
+            },
         )
 
         yaml = YAML()
         yaml.indent(mapping=2, sequence=4, offset=2)
-        configs_path = Path(f'{deploy_dir}/config.yml')
-        with configs_path.open('w', encoding='utf-8') as fp:
+        configs_path = Path(f"{deploy_dir}/config.yml")
+        with configs_path.open("w", encoding="utf-8") as fp:
             yaml.dump(configs.dict(), fp)
 
         self._add_permissions(configs_path)
-        self._print_service_message('\tconfigs\t\t\N{check mark}', color=typer.colors.GREEN)
+        self._print_service_message("\tconfigs\t\t\N{CHECK MARK}", color=typer.colors.GREEN)
 
     def create_dockerfile(self, deploy_dir: Path, project_name: str):
-        """ Create file with instructions for Docker daemon to build an image """
+        """Create file with instructions for Docker daemon to build an image"""
 
-        dockerfile_path = Path(f'{deploy_dir}/Dockerfile')
-        with dockerfile_path.open('w', encoding='utf-8') as fp:
+        dockerfile_path = Path(f"{deploy_dir}/Dockerfile")
+        with dockerfile_path.open("w", encoding="utf-8") as fp:
             for line in self.defaults.dockerfile.format(project_name=project_name).splitlines():
-                fp.write(f'{line.strip()}\n')
+                fp.write(f"{line.strip()}\n")
 
         self._add_permissions(dockerfile_path)
-        self._print_service_message('\tdockerfile\t\N{check mark}', color=typer.colors.GREEN)
+        self._print_service_message("\tdockerfile\t\N{CHECK MARK}", color=typer.colors.GREEN)
 
     def create_compose(self, deploy_dir: Path, project_name: str):
         data = {
-            'version': '3',
-            'services': {
-                project_name + '-{{ ENV }}': {
-                    'build': {
-                        'context': '..',
-                        'dockerfile': f'{deploy_dir}/Dockerfile'
-                    },
-                    'image': project_name + ':{{ ENV }}',
-                    'container_name': project_name + '-{{ ENV }}'
+            "version": "3",
+            "services": {
+                project_name + "-{{ ENV }}": {
+                    "build": {"context": "..", "dockerfile": f"{deploy_dir}/Dockerfile"},
+                    "image": project_name + ":{{ ENV }}",
+                    "container_name": project_name + "-{{ ENV }}",
                 }
-            }
+            },
         }
         yaml = YAML()
         yaml.indent(mapping=2, sequence=4, offset=2)
-        compose_path = Path(f'{deploy_dir}/docker-compose-template.j2')
-        with compose_path.open('w', encoding='utf-8') as fp:
+        compose_path = Path(f"{deploy_dir}/docker-compose-template.j2")
+        with compose_path.open("w", encoding="utf-8") as fp:
             yaml.dump(data, fp)
 
         self._add_permissions(compose_path)
-        self._print_service_message('\tdocker-compose\t\N{check mark}', color=typer.colors.GREEN)
+        self._print_service_message("\tdocker-compose\t\N{CHECK MARK}", color=typer.colors.GREEN)
 
 
 def main(
-    silent: bool = typer.Option(False, help='Ignore all communication with user and use default values'),
-    version: bool = typer.Option(False, help='Print version and exit')
+    silent: bool = typer.Option(False, help="Ignore all communication with user and use default values"),
+    version: bool = typer.Option(False, help="Print version and exit"),
 ):
     if version:
-        typer.echo(f'pydeployhelp-quickstart version {__version__}')
+        typer.echo(f"pydeployhelp-quickstart version {__version__}")
     else:
         quickstart = Quickstart(silent=silent)
         quickstart.start()
@@ -169,5 +167,5 @@ def run():
     typer.run(main)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

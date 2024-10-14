@@ -45,9 +45,9 @@ python -m pip install --upgrade --no-cache-dir pydeployhelp
 ### pydeployhelp
 
 ```text
-Usage: pydeployhelp [OPTIONS]                                                                                                                                                      
+Usage: pydeployhelp [OPTIONS]
 
-Main entrypoint, which will be called when executing `pydeployhelp` in console                                                                                                     
+Main entrypoint, which will be called when executing `pydeployhelp` in console
 
 ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ --task                         TEXT  List of deployment tasks defined in config.yaml                                                                                             │
@@ -72,7 +72,7 @@ pydeployhelp --task build --task up --target all
 ### pydeployhelp-quickstart
 
 ```text
-Usage: pydeployhelp-quickstart [OPTIONS]                                                                                                                                           
+Usage: pydeployhelp-quickstart [OPTIONS]
 
 ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ --silent     --no-silent       Ignore all communication with user and use default values [default: no-silent]                                                                    │
