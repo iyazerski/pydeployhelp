@@ -4,88 +4,109 @@ Quickstart
 Overview
 --------
 
-``pydeployhelp`` is aimed to help integrating deploy (*via Docker*) to
-Python projects. It can be used both as external library (all processors
-can be imported) and as CLI tool.
+``pydeployhelp`` is a tool designed to simplify deploying Python projects using Docker. It can be used as a standalone CLI tool, offering flexibility in integrating deployment processes into your Python workflows.
 
-Following CLI tools will be available after installation:
+After installation, the following CLI tools are available:
 
--  ``pydeployhelp-quickstart``: creates directory with deploy service
-   files templates (*Dockerfile, docker-compose, configs*)
+- ``pydeployhelp``: Deploys your project based on the configuration found in the deployment directory created by ``pydeployhelp-quickstart``.
+- ``pydeployhelp-quickstart``: Sets up a deployment directory with service file templates, including ``Dockerfile``, ``docker-compose``, and configuration files.
 
--  ``pydeployhelp``: performs deploy according to info from deploy
-   directory crated by ``pydeployhelp-quickstart``
-
-Documentation
--------------
-
-Please see the latest documentation at `Read the Docs <https://pydeployhelp.readthedocs.io/>`__
+``pydeployhelp`` makes it easy to containerize and manage your Python applications using Docker, saving you time and reducing complexity in the deployment phase.
 
 Installation
 ------------
 
-``pydeployhelp`` can be installed from ``PyPi``:
+You can install ``pydeployhelp`` from `PyPI <https://pypi.org/project/pydeployhelp/>`_:
 
-.. code:: shell
+.. code-block:: shell
 
     pip install pydeployhelp
 
-Or locally (inside project directory):
+Or install it locally from the project directory:
 
-.. code:: shell
+.. code-block:: shell
 
-    python setup.py install
+    pip install -e .
 
-``pydeployhelp-quickstart`` tool and all code library can be used
-without any external system packages installation.
+Requirements
+~~~~~~~~~~~~
 
-``pydeployhelp`` requires following external packages to be installed:
+``pydeployhelp`` requires `Docker <https://docs.docker.com/>`_ to be installed on your system. The ``pydeployhelp-quickstart`` tool and the core library can be used without installing any additional system-level dependencies, making setup straightforward.
 
--  `Docker <https://docs.docker.com/>`__
+Updating to the Latest Version
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  `docker-compose <https://docs.docker.com/compose/>`__
+To update to the latest version of ``pydeployhelp``, run the following command:
 
-Updating to newer versions
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code:: shell
+.. code-block:: shell
 
     python -m pip install --upgrade --no-cache-dir pydeployhelp
 
 Usage
 -----
 
-pydeployhelp-quickstart
-~~~~~~~~~~~~~~~~~~~~~~~
+``pydeployhelp``
+~~~~~~~~~~~~~~~
 
-.. code:: text
+The main command for deploying your project is ``pydeployhelp``. Here is an overview of the available options:
 
-    usage: pydeployhelp-quickstart [-h] [-s] [-v]
+.. code-block:: text
 
-    optional arguments:
-      -h, --help    show this help message and exit
-      -s, --silent  If specified, all communication with user will be ignored, default values will be used instead
-      -v, --version         Print version and exit
+    Usage: pydeployhelp [OPTIONS]
 
-Executing in ordinary way (without ``--silent``) you will be asked to
-enter some info (*project name, deploy directory location, supported
-tasks*), soon after that you will see message about service files
-creation status.
+    Main entrypoint, which will be called when executing `pydeployhelp` in console.
 
-pydeployhelp
-~~~~~~~~~~~~
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --task                         TEXT  List of deployment tasks defined in config.yaml                                                                                             │
+    │ --target                       TEXT  List of deployment targets defined in config.yaml                                                                                           │
+    │ --deploydir                    TEXT  Path to directory with deploy scripts (normally generated via `pydeployhelp-quickstart`) [default: deploy]                                  │
+    │ --silent       --no-silent           Ignore all communication with user and use default values [default: no-silent]                                                              │
+    │ --version      --no-version          Print version and exit [default: no-version]                                                                                                │
+    │ --help                               Show this message and exit.                                                                                                                 │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-.. code:: text
+Running ``pydeployhelp`` without the ``--silent`` flag will prompt you to provide information such as task names and services. Once completed, a status message regarding the deployment will be displayed.
 
-    usage: pydeployhelp [-h] [-d DEPLOYDIR] [-s] [-v]
+Example of a non-interactive console mode (you won't be prompted for manual input):
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      -d DEPLOYDIR, --deploydir DEPLOYDIR
-                            Path to directory with deploy scripts (normally generated via `pydeployhelp-quickstart`)
-      -s, --silent          If specified, all communication with user will be ignored, default values will be used instead
-      -v, --version         Print version and exit
+.. code-block:: shell
 
-Executing in ordinary way (without ``--silent``) you will be asked to
-enter some info (*task names, services names*), soon after that you will
-see message about deploy status.
+    pydeployhelp --task build --task up --target all
+
+This command will run the specified deployment tasks (``build`` and ``up``) for all defined targets.
+
+``pydeployhelp-quickstart``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``pydeployhelp-quickstart`` command is used to generate a deployment directory with the necessary service templates. Here is how you can use it:
+
+.. code-block:: text
+
+    Usage: pydeployhelp-quickstart [OPTIONS]
+
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --silent     --no-silent       Ignore all communication with user and use default values [default: no-silent]                                                                    │
+    │ --version    --no-version      Print version and exit [default: no-version]                                                                                                      │
+    │ --help                         Show this message and exit.                                                                                                                       │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+Running ``pydeployhelp-quickstart`` without the ``--silent`` flag will prompt you to provide information such as the project name, deployment directory location, and supported tasks. Once completed, a status message will indicate the creation of the service files.
+
+Example Workflow
+----------------
+
+1. **Quickstart Setup**: Use ``pydeployhelp-quickstart`` to set up your deployment directory with service templates.
+
+   .. code-block:: shell
+
+       pydeployhelp-quickstart
+
+2. **Edit Configuration**: Customize the generated files (``Dockerfile``, ``docker-compose``, etc.) in the deployment directory to suit your project.
+
+3. **Deploy**: Run ``pydeployhelp`` to start deploying your project.
+
+   .. code-block:: shell
+
+       pydeployhelp --task build --target all
+
+This workflow helps you easily set up a Docker environment and manage your deployments effectively.

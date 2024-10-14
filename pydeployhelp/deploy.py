@@ -3,6 +3,7 @@ import io
 import os
 import time
 from pathlib import Path
+import subprocess
 import typing as t
 from typing_extensions import Annotated
 
@@ -29,14 +30,19 @@ class Deploy(CLIBase):
         self.targets = targets
         self.deploydir = Path(deploydir)
 
-    @staticmethod
-    def validate_docker_binaries() -> None:
+    def validate_docker_binaries(self) -> None:
         """Check that all required binaries exist and are accessible by current user"""
 
-        for binary in ["docker", "docker compose"]:
-            return_code = os.system(f"{binary} version")
-            if return_code != 0:
-                raise typer.Abort()
+        try:
+            # Run the command while suppressing stdout and stderr
+            with open(os.devnull, "w") as devnull:
+                subprocess.run(["docker", "version"], stdout=devnull, stderr=devnull, check=True)
+        except subprocess.CalledProcessError:
+            self._print_service_message(
+                "Error: 'docker' command is not available or not working correctly. Is the docker daemon running?",
+                color=typer.colors.RED,
+            )
+            raise typer.Abort()
 
     def start(self) -> None:
         """Controller for all operations performed by `pydeployhelp`"""
