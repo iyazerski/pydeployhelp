@@ -1,6 +1,7 @@
+#!/usr/bin/env python
 import abc
 import typing as t
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 import typer
@@ -43,7 +44,7 @@ class CLIBase(abc.ABC):
 
         agree = typer.confirm("Do you agree to start processing?")
         if not agree:
-            raise typer.Abort()
+            raise typer.Abort
 
     def enter(self, allowed_items: list[str], default: str, items_name: str) -> list[str]:
         """Receive answer from user input for provided list of available choices"""

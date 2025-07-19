@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import typer
 from ruamel.yaml import YAML
@@ -18,7 +18,7 @@ class QuickstartDefaults:
 
 
 class Quickstart(CLIBase):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.defaults = QuickstartDefaults(
             deploy_dir="deploy",
@@ -60,7 +60,7 @@ class Quickstart(CLIBase):
     def enter_project_name(self) -> str:
         """Receive project name from user input"""
 
-        project_name = Path(os.getcwd()).name
+        project_name = Path.cwd().name
         if not self.silent:
             project_name = typer.prompt("Enter project name", default=project_name)
         return project_name
@@ -72,21 +72,21 @@ class Quickstart(CLIBase):
         if not self.silent:
             deploy_dir = typer.prompt("Enter directory path where deploy scripts should be created", default=deploy_dir)
 
-        deploy_dir = Path(deploy_dir)
-        if deploy_dir.exists() and not deploy_dir.is_dir():
+        deploy_dir_path = Path(deploy_dir)
+        if deploy_dir_path.exists() and not deploy_dir_path.is_dir():
             self._print_service_message(
-                f'"{deploy_dir}"" is not a valid directory path, please try again', color=typer.colors.RED
+                f'"{deploy_dir_path}"" is not a valid directory path, please try again', color=typer.colors.RED
             )
 
             if self.silent:
-                raise typer.Abort()  # prevent from RecursionError
+                raise typer.Abort
 
             return self.enter_deploy_dir()
 
-        deploy_dir.mkdir(exist_ok=True, parents=True)
-        self._add_permissions(deploy_dir)
+        deploy_dir_path.mkdir(exist_ok=True, parents=True)
+        self._add_permissions(deploy_dir_path)
 
-        return deploy_dir
+        return deploy_dir_path
 
     def enter_deploy_tasks(self) -> list[str]:
         """Receive deploy tasks names from user input"""
@@ -98,13 +98,13 @@ class Quickstart(CLIBase):
         """Create file with deploy configs and tasks pipeline"""
 
         configs = Configs(
-            context=dict(env_file=".env", compose=f"{deploy_dir}/docker-compose-template.j2"),
+            context={"env_file": ".env", "compose": f"{deploy_dir}/docker-compose-template.j2"},
             tasks={
                 task: [
-                    dict(
-                        title=f"{task} all",
-                        pipeline=[f'docker-compose -f {deploy_dir}/docker-compose-{"{ENV}"}.yml {task}'],
-                    )
+                    {
+                        "title": f"{task} all",
+                        "pipeline": [f'docker-compose -f {deploy_dir}/docker-compose-{"{ENV}"}.yml {task}'],
+                    }
                 ]
                 for task in deploy_tasks
             },

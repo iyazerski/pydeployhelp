@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 import io
 import os
-import time
-from pathlib import Path
+import shutil
 import subprocess
+import time
 import typing as t
-from typing_extensions import Annotated
+from pathlib import Path
+from typing import Annotated
 
 import typer
-from jinja2 import Template
 from dotenv import dotenv_values
+from jinja2 import Template
 from ruamel.yaml import YAML
 
 from pydeployhelp import __version__
@@ -19,12 +20,12 @@ from pydeployhelp.base import CLIBase, Configs
 class Deploy(CLIBase):
     def __init__(
         self,
-        tasks: list[str] = None,
-        targets: list[str] = None,
+        tasks: list[str] | None = None,
+        targets: list[str] | None = None,
         deploydir: str = "deploy",
         *args: t.Any,
         **kwargs: t.Any,
-    ):
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.tasks = tasks
         self.targets = targets
@@ -35,14 +36,18 @@ class Deploy(CLIBase):
 
         try:
             # Run the command while suppressing stdout and stderr
-            with open(os.devnull, "w") as devnull:
-                subprocess.run(["docker", "version"], stdout=devnull, stderr=devnull, check=True)
+            with Path(os.devnull).open("w") as devnull:
+                docker_path = shutil.which("docker")
+                if docker_path is None:
+                    raise FileNotFoundError("'docker' executable not found in PATH")
+
+                subprocess.run([docker_path, "version"], stdout=devnull, stderr=devnull, check=True)  # noqa: S603
         except subprocess.CalledProcessError:
             self._print_service_message(
                 "Error: 'docker' command is not available or not working correctly. Is the docker daemon running?",
                 color=typer.colors.RED,
             )
-            raise typer.Abort()
+            raise typer.Abort from None
 
     def start(self) -> None:
         """Controller for all operations performed by `pydeployhelp`"""
@@ -91,7 +96,7 @@ class Deploy(CLIBase):
 
         if not configs.tasks:
             self._print_service_message("No tasks were found in configs", color=typer.colors.RED)
-            raise typer.Abort()
+            raise typer.Abort
 
         return configs
 
@@ -179,13 +184,13 @@ class Deploy(CLIBase):
 
         for task in deploy_tasks:
             for subtask in configs.tasks[task]:
-                subtask_name = f'{task}/{subtask["title"]}'
+                subtask_name = f"{task}/{subtask['title']}"
                 self._print_service_message(f'Task "{subtask_name}": Started')
                 try:
                     for i, pipe in enumerate(subtask["pipeline"]):
                         command = pipe.format(**environ)
                         typer.echo(f"Step {i + 1}: {command}\n")
-                        os.system(command)
+                        os.system(command)  # noqa: S605
                 except Exception as e:
                     self._print_service_message(f'Task "{subtask_name}": Skipping. {e}', color=typer.colors.YELLOW)
                 else:
@@ -193,8 +198,8 @@ class Deploy(CLIBase):
 
 
 def main(
-    task: Annotated[list[str], typer.Option(help="List of deployment tasks defined in config.yaml")] = (),
-    target: Annotated[list[str], typer.Option(help="List of deployment targets defined in config.yaml")] = (),
+    task: Annotated[list[str] | None, typer.Option(help="List of deployment tasks defined in config.yaml")] = None,
+    target: Annotated[list[str] | None, typer.Option(help="List of deployment targets defined in config.yaml")] = None,
     deploydir: Annotated[
         str,
         typer.Option(help="Path to directory with deploy scripts (normally generated via `pydeployhelp-quickstart`)"),
@@ -207,7 +212,7 @@ def main(
     if version:
         typer.echo(f"pydeployhelp version {__version__}")
     else:
-        deploy = Deploy(tasks=task, targets=target, deploydir=deploydir, silent=silent)
+        deploy = Deploy(tasks=task or [], targets=target or [], deploydir=deploydir, silent=silent)
         deploy.start()
 
 
