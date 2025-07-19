@@ -17,17 +17,43 @@ For detailed instructions and the latest information, please visit the [official
 
 ## Installation
 
-You can install `pydeployhelp` from [PyPI](https://pypi.org/project/pydeployhelp/):
+- **Python 3.11 or later** is required.
 
-```shell
-pip install pydeployhelp
-```
+### Using `pip` (from `PyPi`)
 
-Or install it locally from the project directory:
+1. Install via `pip`:
 
-```shell
-pip install -e .
-```
+   ```bash
+   pip install pydeployhelp
+   ```
+
+2. Now you can use the `pydeployhelp` command:
+
+   ```bash
+   pydeployhelp --help
+   ```
+
+### Using uv (only for developers)
+
+1. Clone this repository:
+
+   ```bash
+   git clone https://github.com/iyazerski/pydeployhelp.git
+   cd pydeployhelp
+   ```
+
+2. Install dependencies via [uv](https://docs.astral.sh/uv/):
+
+   ```bash
+   uv sync
+   ```
+
+3. To run the CLI:
+
+   ```bash
+   uv run pydeployhelp --help
+   ```
+
 
 ### Requirements
 
