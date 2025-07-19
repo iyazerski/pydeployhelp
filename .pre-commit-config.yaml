@@ -17,5 +17,3 @@ repos:
     rev: v1.17.0
     hooks:
       - id: mypy
-        additional_dependencies: [pydantic, types-requests]
-        args: [--ignore-missing-imports, --allow-untyped-decorators, --explicit-package-bases]

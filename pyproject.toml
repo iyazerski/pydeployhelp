@@ -1,72 +1,42 @@
 [project]
 name = "pydeployhelp"
+version = "1.4.3"
+dependencies = [
+    "jinja2>=3.1.6",
+    "python-dotenv>=1.1.1",
+    "ruamel-yaml>=0.18.14",
+    "typer-slim>=0.16.0",
+]
+requires-python = ">=3.11"
 authors = [
     {name = "Ihar Yazerski", email = "ihar.yazerski@gmail.com"},
 ]
 description = "CLI tool that helps integrating deploy (via Docker) to Python projects"
 readme = "README.md"
-requires-python = ">=3.10"
-license = {text = "MIT License"}
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-version = "1.4.2"
+license = "MIT"
 
+[project.optional-dependencies]
+dev = [
+    "ipython>=9.4.0",
+    "mypy>=1.17.0",
+    "ruff>=0.12.4",
+]
 
 [project.urls]
-"Homepage" = "https://github.com/iyazerski/pydeployhelp"
+Homepage = "https://github.com/iyazerski/pydeployhelp"
+Repository = "https://github.com/iyazerski/pydeployhelp"
 
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
-
-
-[tool.poetry]
-name = "pydeployhelp"
-description = "CLI tool that helps integrating deploy (via Docker) to Python projects"
-authors = ["Ihar Yazerski <ihar.yazerski@gmail.com>"]
-readme = "README.md"
-homepage = "https://github.com/iyazerski/pydeployhelp"
-repository = "https://github.com/iyazerski/pydeployhelp"
-license = "MIT"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-version = "1.4.2"
-
-
-[tool.poetry.dependencies]
-python = ">=3.10"
-jinja2 = "^3.1"
-ruamel-yaml = "^0.18"
-python-dotenv = "^1.0"
-typer-slim = "^0.12.5"
-
-
-[tool.poetry.group.dev.dependencies]
-ipython = "^8.15"
-pre-commit = "^4"
-ruff = "^0.6"
-
-
-[tool.poetry.scripts]
+[project.scripts]
 pydeployhelp = "pydeployhelp.deploy:run"
 pydeployhelp-quickstart = "pydeployhelp.quickstart:run"
 
+[tool.uv]
+package = true
 
 [tool.ruff]
 line-length = 120
 indent-width = 4
-
-
-[tool.ruff.format]
-quote-style = "double"
-
-
-[tool.ruff.lint.isort]
-combine-as-imports = true
+lint.select = ["ALL"]
+lint.ignore = ["TRY", "PGH", "D", "DOC", "TD", "C90", "FLY", "EM", "G", "PERF401", "DTZ", "RET501", "COM", "S101", "FBT", "PLR2004", "SIM108", "PLR0913", "BLE001", "ANN401", "FIX002", "FA102", "E501", "B905", "PLR0912", "PLR0911", "N999"]
+lint.isort.combine-as-imports = true
+format.quote-style = "double"
