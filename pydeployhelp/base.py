@@ -82,7 +82,7 @@ class CLIBase(abc.ABC):
             if "all" in items:
                 items = allowed_items
 
-            typer.echo(f'\t{items_name}: {typer.style(", ".join(items), fg=typer.colors.GREEN)}')
+            typer.echo(f"\t{items_name}: {typer.style(', '.join(items), fg=typer.colors.GREEN)}")
 
         return items
 

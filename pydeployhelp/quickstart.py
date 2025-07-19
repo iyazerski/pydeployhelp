@@ -103,7 +103,7 @@ class Quickstart(CLIBase):
                 task: [
                     {
                         "title": f"{task} all",
-                        "pipeline": [f'docker-compose -f {deploy_dir}/docker-compose-{"{ENV}"}.yml {task}'],
+                        "pipeline": [f"docker-compose -f {deploy_dir}/docker-compose-{'{ENV}'}.yml {task}"],
                     }
                 ]
                 for task in deploy_tasks
